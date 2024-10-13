@@ -17,15 +17,16 @@ def read_Data():
     rows = cursor.fetchall()
     rooms = []
     for row in rows:
-        room = Rooms(str(row[1]), str(row[2]), str(row[3]), str(row[4]), str(row[5]), str(row[6]), str(row[7]), str(row[8]), str(row[9]), str(row[0]))
+        room = Rooms(row[1], row[2], row[5], row[6], row[7], row[8], row[9], row[3] ,row[10], row[0])
         rooms.append(room)
 
     rooms_list = [
         {
             "id": room.room_id,
             "type": room.room_type,
-            "status": room.room_status,
+            "status": room.statusIntoString(),
             "last_cleaned": room.last_cleaned,
+            "needCleaning": room.needCleaning(),
             "price_per_day": room.room_price,
             "room_area": room.room_area,
             "floor_number": room.floor_number,

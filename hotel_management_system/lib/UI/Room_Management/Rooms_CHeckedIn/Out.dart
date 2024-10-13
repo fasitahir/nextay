@@ -1,21 +1,23 @@
 import 'dart:convert';
+//import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/scheduler.dart';
+import 'package:intl/intl.dart';
 
 // Room class definition
 class Room {
-  final String id;
+  final int id;
   final String type;
   final String status;
-  final String lastCleaned;
-  final String needsCleaning;
-  final String pricePerDay;
-  final String? roomArea;
-  final String floorNumber;
-  final String maxOccupancy;
+  final DateTime lastCleaned;
+  final bool needsCleaning;
+  final double pricePerDay;
+  final double? roomArea;
+  final int floorNumber;
+  final int maxOccupancy;
   final String bedType;
-  final String lastMaintenanceDate;
+  final DateTime lastMaintenanceDate;
 
   Room({
     required this.id,
@@ -32,18 +34,19 @@ class Room {
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
+    final dateFormat = DateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
     return Room(
       id: json['id'],
       type: json['type'],
       status: json['status'],
-      lastCleaned: json['last_cleaned'],
-      needsCleaning: json['status'],
+      lastCleaned: dateFormat.parse(json['last_cleaned']),
+      needsCleaning: json['needCleaning'],
       pricePerDay: json['price_per_day'],
       roomArea: json['room_area'],
       floorNumber: json['floor_number'],
       maxOccupancy: json['max_occupancy'],
       bedType: json['bed_type'],
-      lastMaintenanceDate: json['last_maintenance_date'],
+      lastMaintenanceDate: dateFormat.parse(json['last_maintenance_date']),
     );
   }
 }
@@ -113,14 +116,13 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   }
 
   void _checkOutRoom(int index) {
-    String totalBill = _rooms[index].pricePerDay; // Example: One day stay
+    double totalBill = _rooms[index].pricePerDay; // Example: One day stay
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text('Checkout Bill'),
-          content: Text(
-              'Total Bill for Room ${_rooms[index].id}: \$${totalBill[2]}'),
+          content: Text('Total Bill for Room ${_rooms[index].id}: $totalBill'),
           actions: [
             TextButton(
               onPressed: () {

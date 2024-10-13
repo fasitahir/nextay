@@ -10,3 +10,22 @@ class Rooms:
         self.last_cleaned = last_cleaned
         self.last_maintenance = last_maintenance
         self.room_id = room_id
+
+    def needCleaning(self):
+        need = False
+        if self.room_status == 3:
+            need = True
+            return need
+        else:
+            return need
+        
+    def statusIntoString(self):
+        if self.room_status == 1:
+            return "Available"
+        elif self.room_status == 2:
+            return "Occupied"
+        elif self.room_status == 3:
+            return "Dirty"
+        else:
+            return "Unknown"
+        
