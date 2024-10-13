@@ -18,6 +18,8 @@ class Room {
   final int maxOccupancy;
   final String bedType;
   final DateTime lastMaintenanceDate;
+  final DateTime? checkInTime;
+  final DateTime? checkOutTime;
 
   Room({
     required this.id,
@@ -31,6 +33,8 @@ class Room {
     required this.maxOccupancy,
     required this.bedType,
     required this.lastMaintenanceDate,
+    this.checkInTime,
+    this.checkOutTime,
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -47,6 +51,12 @@ class Room {
       maxOccupancy: json['max_occupancy'],
       bedType: json['bed_type'],
       lastMaintenanceDate: dateFormat.parse(json['last_maintenance_date']),
+      checkInTime: json['check_in_time'] != null
+          ? dateFormat.parse(json['check_in_time'])
+          : null,
+      checkOutTime: json['check_out_time'] != null
+          ? dateFormat.parse(json['check_out_time'])
+          : null,
     );
   }
 }
@@ -115,7 +125,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
 
       if (response.statusCode == 200) {
         setState(() {
-          _rooms[index].status = 'Checked In';
+          _rooms[index].status = 'Occupied';
         });
       } else {
         throw Exception('Failed to check-in room');
@@ -145,7 +155,17 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   }
 
   void _checkOutRoom(int index) async {
-    double totalBill = _rooms[index].pricePerDay; // Calculate total bill
+    DateTime? checkInTime = _rooms[index].checkInTime;
+    DateTime? checkOutTime = _rooms[index].checkOutTime;
+    double totalBill = 0;
+
+    if (checkInTime != null && checkOutTime != null) {
+      final duration = checkOutTime.difference(checkInTime).inDays;
+      totalBill = _rooms[index].pricePerDay * duration;
+    } else {
+      totalBill =
+          _rooms[index].pricePerDay; // Default bill if times are unavailable
+    }
 
     try {
       final response = await http.put(
@@ -155,8 +175,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
 
       if (response.statusCode == 200) {
         setState(() {
-          _rooms[index].status =
-              'To Be Cleaned'; // Change status to 'To Be Cleaned'
+          _rooms[index].status = 'Dirty'; // Change status to 'Dirty'
         });
         showDialog(
           context: context,
@@ -233,14 +252,12 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
 
   Color _getCardColor(String status) {
     switch (status) {
-      case 'Checked In':
-        return Colors.red[100] ?? Colors.red; // Red for checked in
-      case 'To Be Cleaned':
-        return Colors.yellow[100] ?? Colors.yellow; // Yellow for to be cleaned
+      case 'Occupied':
+        return Colors.red[100] ?? Colors.red; // Red for Occupied
+      case 'Dirty':
+        return Colors.yellow[100] ?? Colors.yellow; // Yellow for Dirty
       case 'Available':
         return Colors.green[100] ?? Colors.green; // Green for available
-      case 'Cleaning':
-        return Colors.orange[100] ?? Colors.orange; // Orange for cleaning
       default:
         return Colors.white; // Default color
     }
@@ -249,7 +266,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   Widget _buildTrailingButtons(int index) {
     final isAvailable = _rooms[index].status == 'Available';
     final isCleaning = _rooms[index].status == 'Cleaning';
-    final isToBeCleaned = _rooms[index].status == 'To Be Cleaned';
+    final isToBeCleaned = _rooms[index].status == 'Dirty';
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -351,11 +368,11 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
                         children: [
                           _buildSummaryCard("Total Rooms", "${_rooms.length}"),
                           _buildSummaryCard("Occupied",
-                              "${_rooms.where((r) => r.status == 'Checked In').length}"),
+                              "${_rooms.where((r) => r.status == 'Occupied').length}"),
                           _buildSummaryCard("Available",
                               "${_rooms.where((r) => r.status == 'Available').length}"),
                           _buildSummaryCard("Cleaning",
-                              "${_rooms.where((r) => r.status == 'Cleaning').length}"),
+                              "${_rooms.where((r) => r.status == 'Dirty').length}"), // Change this to match the correct status
                         ],
                       ),
                     )
@@ -363,7 +380,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
                       children: [
                         _buildSummaryCard("Total Rooms", "${_rooms.length}"),
                         _buildSummaryCard("Occupied",
-                            "${_rooms.where((r) => r.status == 'Checked In').length}"),
+                            "${_rooms.where((r) => r.status == 'Occupied').length}"),
                         _buildSummaryCard("Available",
                             "${_rooms.where((r) => r.status == 'Available').length}"),
                         _buildSummaryCard("Cleaning",
