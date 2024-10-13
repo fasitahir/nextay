@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 class Room {
   final int id;
   final String type;
-  final String status;
+  String status;
   final DateTime lastCleaned;
   final bool needsCleaning;
   final double pricePerDay;
@@ -53,6 +53,8 @@ class Room {
 
 // StaffRoomsPage
 class StaffRoomsPage extends StatefulWidget {
+  const StaffRoomsPage({super.key});
+
   @override
   _StaffRoomsPageState createState() => _StaffRoomsPageState();
 }
@@ -103,44 +105,81 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
     super.dispose();
   }
 
-  void _checkInRoom(int index) {
-    setState(() {
-      // Implement your logic here
-    });
+  void _checkInRoom(int index) async {
+    try {
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/checkin'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _rooms[index].status = 'Checked In';
+        });
+      } else {
+        throw Exception('Failed to check-in room');
+      }
+    } catch (error) {
+      print('Error checking in room: $error');
+    }
   }
 
-  void _cleanRoom(int index) {
-    setState(() {
-      // Implement your logic here
-    });
+  void _cleanRoom(int index) async {
+    try {
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/clean'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _rooms[index].status = 'Available'; // or 'Cleaning'
+        });
+      } else {
+        throw Exception('Failed to clean room');
+      }
+    } catch (error) {
+      print('Error cleaning room: $error');
+    }
   }
 
-  void _checkOutRoom(int index) {
-    double totalBill = _rooms[index].pricePerDay; // Example: One day stay
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Checkout Bill'),
-          content: Text('Total Bill for Room ${_rooms[index].id}: $totalBill'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  // Implement your logic here
-                });
-                Navigator.of(context).pop();
-              },
-              child: Text('Pay & Checkout'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
+  void _checkOutRoom(int index) async {
+    double totalBill =
+        _rooms[index].pricePerDay; // Example calculation for bill
+
+    try {
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/checkout'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _rooms[index].status =
+              'Available'; // Room becomes available after checkout
+        });
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Checkout Bill'),
+              content:
+                  Text('Total Bill for Room ${_rooms[index].id}: $totalBill'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
         );
-      },
-    );
+      } else {
+        throw Exception('Failed to checkout room');
+      }
+    } catch (error) {
+      print('Error during checkout: $error');
+    }
   }
 
   @override

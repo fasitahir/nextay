@@ -48,5 +48,36 @@ def get_rooms():
     data = read_Data()
     return data
 
+
+@app.route('/rooms/<int:room_id>/checkin', methods=['PUT'])
+def check_in_room(room_id):
+    try:
+        cursor.execute("UPDATE Rooms SET RoomStatus = 2 WHERE id = %s", (room_id,))
+        connection.commit()
+        return jsonify({'message': 'Room checked in successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/rooms/<int:room_id>/clean', methods=['PUT'])
+def clean_room(room_id):
+    try:
+        cursor.execute("UPDATE Rooms SET RoomStatus = 1 WHERE id = %s", (room_id,))
+        connection.commit()
+        return jsonify({'message': 'Room cleaned successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/rooms/<int:room_id>/checkout', methods=['PUT'])
+def check_out_room(room_id):
+    try:
+        cursor.execute("UPDATE Rooms SET RoomStatus = 3 WHERE id = %s", (room_id,))
+        connection.commit()
+        return jsonify({'message': 'Room checked out successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)
