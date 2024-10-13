@@ -5,7 +5,7 @@ from Room import Rooms
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Database configuration
 config = db.Configration.get_instance()
@@ -52,32 +52,51 @@ def get_rooms():
 @app.route('/rooms/<int:room_id>/checkin', methods=['PUT'])
 def check_in_room(room_id):
     try:
-        cursor.execute("UPDATE Rooms SET RoomStatus = 2 WHERE id = %s", (room_id,))
+        print(f"Attempting to check in room with ID: {room_id}")  # Debug info
+        cursor.execute("UPDATE Rooms SET RoomStatus = 2 WHERE RoomID = ?", (room_id,))
         connection.commit()
+        print("Room checked in successfully")
         return jsonify({'message': 'Room checked in successfully'}), 200
     except Exception as e:
+        print(f"Error: {e}")  # Debugging the error
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/rooms/<int:room_id>/clean', methods=['PUT'])
 def clean_room(room_id):
     try:
-        cursor.execute("UPDATE Rooms SET RoomStatus = 1 WHERE id = %s", (room_id,))
+        # Debugging info
+        print(f"Attempting to clean room with ID: {room_id}")
+        
+        # Update the RoomStatus for the given room_id
+        cursor.execute("UPDATE Rooms SET RoomStatus = 1 WHERE RoomID = ?", (room_id,))
         connection.commit()
+        
+        print("Room cleaned successfully")
         return jsonify({'message': 'Room cleaned successfully'}), 200
     except Exception as e:
+        # Debugging the error
+        print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/rooms/<int:room_id>/checkout', methods=['PUT'])
 def check_out_room(room_id):
     try:
-        cursor.execute("UPDATE Rooms SET RoomStatus = 3 WHERE id = %s", (room_id,))
+        # Debugging info
+        print(f"Attempting to check out room with ID: {room_id}")
+        
+        # Update the RoomStatus for the given room_id
+        cursor.execute("UPDATE Rooms SET RoomStatus = 3 WHERE RoomID = ?", (room_id,))
         connection.commit()
+        
+        print("Room checked out successfully")
         return jsonify({'message': 'Room checked out successfully'}), 200
     except Exception as e:
+        # Debugging the error
+        print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
 
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port='5000')

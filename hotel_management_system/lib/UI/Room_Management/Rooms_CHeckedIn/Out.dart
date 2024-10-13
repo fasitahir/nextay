@@ -108,7 +108,8 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   void _checkInRoom(int index) async {
     try {
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/checkin'),
+        Uri.parse(
+            'http://192.168.10.24:5000/rooms/${_rooms[index].id}/checkin'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -144,8 +145,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   }
 
   void _checkOutRoom(int index) async {
-    double totalBill =
-        _rooms[index].pricePerDay; // Example calculation for bill
+    double totalBill = _rooms[index].pricePerDay; // Calculate total bill
 
     try {
       final response = await http.put(
@@ -156,15 +156,15 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
       if (response.statusCode == 200) {
         setState(() {
           _rooms[index].status =
-              'Available'; // Room becomes available after checkout
+              'To Be Cleaned'; // Change status to 'To Be Cleaned'
         });
         showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
               title: Text('Checkout Bill'),
-              content:
-                  Text('Total Bill for Room ${_rooms[index].id}: $totalBill'),
+              content: Text(
+                  'Total Bill for Room ${_rooms[index].id}: \$${totalBill.toStringAsFixed(2)}'), // Format to 2 decimal places
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -180,6 +180,97 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
     } catch (error) {
       print('Error during checkout: $error');
     }
+  }
+
+  Widget _buildRoomList(double screenHeight) {
+    return SizedBox(
+      height: screenHeight * 0.5,
+      child: ListView.builder(
+        itemCount: _rooms.length,
+        itemBuilder: (context, index) {
+          final animation = Tween<Offset>(
+            begin: Offset(1, 0),
+            end: Offset(0, 0),
+          ).animate(
+            CurvedAnimation(
+              parent: _controller,
+              curve: Interval(
+                (index / _rooms.length),
+                1.0,
+                curve: Curves.easeOut,
+              ),
+            ),
+          );
+
+          final cardColor = _getCardColor(_rooms[index].status);
+
+          return SlideTransition(
+            position: animation,
+            child: Card(
+              color: cardColor,
+              margin: EdgeInsets.symmetric(vertical: 8),
+              child: ListTile(
+                title: Text("Room ${_rooms[index].id}"),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Type: ${_rooms[index].type}"),
+                    Text("Status: ${_rooms[index].status}"),
+                    Text("Last Cleaned: ${_rooms[index].lastCleaned}"),
+                    Text(
+                        "Price Per Day: \$${_rooms[index].pricePerDay.toStringAsFixed(2)}"), // Format price
+                    Text("Bed Type: ${_rooms[index].bedType}"),
+                  ],
+                ),
+                trailing: _buildTrailingButtons(index),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Color _getCardColor(String status) {
+    switch (status) {
+      case 'Checked In':
+        return Colors.red[100] ?? Colors.red; // Red for checked in
+      case 'To Be Cleaned':
+        return Colors.yellow[100] ?? Colors.yellow; // Yellow for to be cleaned
+      case 'Available':
+        return Colors.green[100] ?? Colors.green; // Green for available
+      case 'Cleaning':
+        return Colors.orange[100] ?? Colors.orange; // Orange for cleaning
+      default:
+        return Colors.white; // Default color
+    }
+  }
+
+  Widget _buildTrailingButtons(int index) {
+    final isAvailable = _rooms[index].status == 'Available';
+    final isCleaning = _rooms[index].status == 'Cleaning';
+    final isToBeCleaned = _rooms[index].status == 'To Be Cleaned';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isAvailable)
+          IconButton(
+            icon: Icon(Icons.check_box),
+            onPressed: () => _checkInRoom(index),
+          ),
+        if (!isAvailable && !isCleaning && isToBeCleaned)
+          IconButton(
+            icon: Icon(Icons.cleaning_services),
+            onPressed: () => _cleanRoom(index),
+          ),
+        if (!isAvailable && !isCleaning && !isToBeCleaned)
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: () => _checkOutRoom(index),
+          ),
+      ],
+    );
   }
 
   @override
@@ -286,77 +377,77 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
     );
   }
 
-  Widget _buildRoomList(double screenHeight) {
-    return SizedBox(
-      height: screenHeight * 0.5,
-      child: ListView.builder(
-        itemCount: _rooms.length,
-        itemBuilder: (context, index) {
-          final animation = Tween<Offset>(
-            begin: Offset(1, 0),
-            end: Offset(0, 0),
-          ).animate(
-            CurvedAnimation(
-              parent: _controller,
-              curve: Interval(
-                (index / _rooms.length),
-                1.0,
-                curve: Curves.easeOut,
-              ),
-            ),
-          );
+  // Widget _buildRoomList(double screenHeight) {
+  //   return SizedBox(
+  //     height: screenHeight * 0.5,
+  //     child: ListView.builder(
+  //       itemCount: _rooms.length,
+  //       itemBuilder: (context, index) {
+  //         final animation = Tween<Offset>(
+  //           begin: Offset(1, 0),
+  //           end: Offset(0, 0),
+  //         ).animate(
+  //           CurvedAnimation(
+  //             parent: _controller,
+  //             curve: Interval(
+  //               (index / _rooms.length),
+  //               1.0,
+  //               curve: Curves.easeOut,
+  //             ),
+  //           ),
+  //         );
 
-          final isAvailable = _rooms[index].status == 'Available';
-          final isCleaning = _rooms[index].status == 'Cleaning';
-          final cardColor = isCleaning
-              ? Colors.orange[100]
-              : isAvailable
-                  ? Colors.green[100]
-                  : Colors.red[100];
+  //         final isAvailable = _rooms[index].status == 'Available';
+  //         final isCleaning = _rooms[index].status == 'Cleaning';
+  //         final cardColor = isCleaning
+  //             ? Colors.orange[100]
+  //             : isAvailable
+  //                 ? Colors.green[100]
+  //                 : Colors.red[100];
 
-          return SlideTransition(
-            position: animation,
-            child: Card(
-              color: cardColor,
-              margin: EdgeInsets.symmetric(vertical: 8),
-              child: ListTile(
-                title: Text("Room ${_rooms[index].id}"),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Type: ${_rooms[index].type}"),
-                    Text("Status: ${_rooms[index].status}"),
-                    Text("Last Cleaned: ${_rooms[index].lastCleaned}"),
-                    Text("Price Per Day: ${_rooms[index].pricePerDay}"),
-                    Text("Bed Type: ${_rooms[index].bedType}"),
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isAvailable)
-                      IconButton(
-                        icon: Icon(Icons.check_box),
-                        onPressed: () => _checkInRoom(index),
-                      ),
-                    if (!isAvailable && !isCleaning)
-                      IconButton(
-                        icon: Icon(Icons.exit_to_app),
-                        onPressed: () => _checkOutRoom(index),
-                      ),
-                    IconButton(
-                      icon: Icon(Icons.cleaning_services),
-                      onPressed: () => _cleanRoom(index),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  //         return SlideTransition(
+  //           position: animation,
+  //           child: Card(
+  //             color: cardColor,
+  //             margin: EdgeInsets.symmetric(vertical: 8),
+  //             child: ListTile(
+  //               title: Text("Room ${_rooms[index].id}"),
+  //               subtitle: Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   Text("Type: ${_rooms[index].type}"),
+  //                   Text("Status: ${_rooms[index].status}"),
+  //                   Text("Last Cleaned: ${_rooms[index].lastCleaned}"),
+  //                   Text("Price Per Day: ${_rooms[index].pricePerDay}"),
+  //                   Text("Bed Type: ${_rooms[index].bedType}"),
+  //                 ],
+  //               ),
+  //               trailing: Row(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   if (isAvailable)
+  //                     IconButton(
+  //                       icon: Icon(Icons.check_box),
+  //                       onPressed: () => _checkInRoom(index),
+  //                     ),
+  //                   if (!isAvailable && !isCleaning)
+  //                     IconButton(
+  //                       icon: Icon(Icons.exit_to_app),
+  //                       onPressed: () => _checkOutRoom(index),
+  //                     ),
+  //                   IconButton(
+  //                     icon: Icon(Icons.cleaning_services),
+  //                     onPressed: () => _cleanRoom(index),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 
   Widget _buildSummaryCard(String title, String count) {
     return Padding(
