@@ -28,7 +28,7 @@ class AddEmployeeState extends State<AddEmployee> {
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
+          
           gradient: LinearGradient(begin: Alignment.topCenter, colors: [
             Colors.blueGrey[900] ?? Colors.blueGrey,
             Colors.blueGrey[700] ?? Colors.blueGrey,

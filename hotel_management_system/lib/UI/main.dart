@@ -1,6 +1,9 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'homepage.dart'; // Import Home page
+
+import 'DashBoards/Manager_dashboard.dart' as manager; // Use prefix
+import 'DashBoards/Employee_dashboard.dart' as employee; // Use prefix
+import 'DashBoards/Accountant_dashboard.dart' as accountant; // Use prefix
 
 void main() => runApp(
       const MaterialApp(
@@ -155,13 +158,38 @@ class _HomePageState extends State<HomePage> {
                           child: MaterialButton(
                             onPressed: () {
                               String email = emailController.text;
-                              // Navigate to the Home page and pass email and password
+
+                              // Navigate to the appropriate dashboard based on the email entered
+                              Widget nextPage;
+
+                              switch (email.toLowerCase()) {
+                                case "fasi":
+                                  nextPage =
+                                      manager.ManagerHomePage(Name: email);
+                                  break;
+                                case "wali":
+                                  nextPage = employee.EmployeeHomePage(
+                                      managerName:
+                                          email); // Assuming you have this page
+                                  break;
+                                case "laiba" || "alishba":
+                                  nextPage = accountant.AccountantHomePage(
+                                      Name:
+                                          email); // Assuming you have this page
+                                  break;
+
+                                default:
+                                  // Show an error message if the email doesn't match any user
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Invalid user")),
+                                  );
+                                  return; // Exit the function early
+                              }
+
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      //Home(email: email, password: password)),
-                                      Home(email: email),
+                                  builder: (context) => nextPage,
                                 ),
                               );
                             },
