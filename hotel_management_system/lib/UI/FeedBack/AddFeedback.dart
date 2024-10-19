@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:animate_do/animate_do.dart';
-import 'feedback_storage.dart'; // Import the singleton storage
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(MaterialApp(
@@ -25,41 +26,46 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   final List<String> _feedbackTypes = ['Complaint', 'Suggestion', 'Compliment'];
 
-  void _submitFeedback() {
-    final feedback = _feedbackController.text;
-    final customerName = _customerNameController.text;
-    final double currentRating = _rating;
-    final String? feedbackType = _selectedType;
+  void _submitFeedback() async {
+    final String customerName = _customerNameController.text;
+    final String feedbackText = _feedbackController.text;
+    final double rating = _rating;
 
-    if (customerName.isNotEmpty && feedback.isNotEmpty && currentRating > 0 && feedbackType != null) {
-      // Store feedback in the singleton storage
-      FeedbackStorage().addFeedback({
-        'customerName': customerName,
-        'feedback': feedback,
-        'rating': currentRating,
-        'feedbackType': feedbackType,
-      });
-
-      // Clear the fields
-      _feedbackController.clear();
-      _customerNameController.clear();
-      setState(() {
-        _rating = 0;
-        _selectedType = null;
-      });
-
-      // Show confirmation message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Feedback successfully submitted!'),
-        ),
+    if (customerName.isNotEmpty &&
+        feedbackText.isNotEmpty &&
+        rating > 0 &&
+        _selectedType != null) {
+      final response = await http.post(
+        Uri.parse('http://192.168.10.28:5000/feedback'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'customerName': customerName,
+          'Feedback': feedbackText, // Ensure 'Feedback' is capitalized
+          'Rating': rating.toInt(), // Ensure 'Rating' is capitalized
+          'Type':
+              _selectedType, // Type will be sent as a string (e.g., Complaint, Suggestion)
+        }),
       );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Feedback successfully submitted!')),
+        );
+        _feedbackController.clear();
+        _customerNameController.clear();
+        setState(() {
+          _rating = 0;
+          _selectedType = null;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error: ${jsonDecode(response.body)['error']}')),
+        );
+      }
     } else {
-      // Show error message if fields are empty
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide your name, feedback, rating, and type.'),
-        ),
+        const SnackBar(content: Text('Please fill all fields correctly.')),
       );
     }
   }
@@ -89,7 +95,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     children: [
                       const Text(
                         'Customer Name',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -114,7 +121,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     children: [
                       const Text(
                         'Rate Your Experience',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       RatingBar.builder(
@@ -123,7 +131,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         itemSize: 40,
                         itemBuilder: (context, _) => Icon(
                           Icons.star,
-                          color: _rating == 0 ? Colors.white : Colors.yellow[900],
+                          color:
+                              _rating == 0 ? Colors.white : Colors.yellow[900],
                         ),
                         onRatingUpdate: (rating) {
                           setState(() {
@@ -135,7 +144,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                 ),
               ),
-              SlideInLeft(
+              FadeIn(
                 duration: const Duration(seconds: 1),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 48),
@@ -144,7 +153,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     children: [
                       const Text(
                         'Your Feedback',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -160,7 +170,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       const SizedBox(height: 20),
                       const Text(
                         'Type of Feedback',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
@@ -187,19 +198,18 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
-              Center(
-                child: Bounce(
-                  duration: const Duration(seconds: 1),
+              FadeIn(
+                duration: const Duration(seconds: 1),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 55,
                   child: ElevatedButton(
                     onPressed: _submitFeedback,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: blueGrey700,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                    child: Text(
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: blueGrey900),
+                    child: const Text(
                       'Submit Feedback',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(fontSize: 20),
                     ),
                   ),
                 ),

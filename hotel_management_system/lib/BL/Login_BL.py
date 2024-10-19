@@ -14,10 +14,10 @@ class Login:
 
     def redirect_user(self):
         role_redirect_map = {
-            'Finance': '/Accountant_dashboard',
+            'Finance Manager': '/Accountant_dashboard',
             'Manager': '/Manager_dashboard',
             'Staff': '/Employee_Dashboard'
+           
+            
         }
         return role_redirect_map.get(self.Position)  # Use Position for redirection
-def __init__():
-    pass

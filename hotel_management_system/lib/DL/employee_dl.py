@@ -135,21 +135,23 @@ def update_employee(employee_id):
             (first_name, last_name, email, shift, employee_id)
         )
 
-        # Update employee role in the EmployeeDesignation table
-        cursor.execute(
-            """UPDATE EmployeeDesignation 
-               SET Position=? 
-               WHERE EmployeeId=?""",
-            (role, employee_id)
-        )
+        if role != 0:
+            # Update employee role in the EmployeeDesignation table
+            cursor.execute(
+                """UPDATE EmployeeDesignation 
+                SET Position=? 
+                WHERE EmployeeId=?""",
+                (role, employee_id)
+            )
 
         # Update user credentials in the Users table
-        cursor.execute(
-            """UPDATE Users 
-               SET Username=?, Password=? 
-               WHERE EmployeeID=?""",
-            (username, password, employee_id)
-        )
+        if username and password:
+            cursor.execute(
+                """UPDATE Users 
+                SET Username=?, Password=? 
+                WHERE EmployeeID=?""",
+                (username, password, employee_id)
+            )
 
         # Commit the changes to the database
         connection.commit()

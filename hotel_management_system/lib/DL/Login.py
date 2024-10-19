@@ -1,32 +1,32 @@
 from flask import Blueprint, request, jsonify
-
+import pyodbc
+import logging
+import DB_config as db
 import sys
 import os
-
-import DB_config as db
-
-# Add the root directory (project's root) to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from lib.BL.Login_BL import Login
 
-# Create a Flask blueprint
+# Initialize the blueprint
 app = Blueprint('login', __name__)
 
-# Database configuration
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Database configuration: Singleton instance for managing connections
 config = db.Configration.get_instance()
 connection = config.get_connection()
 cursor = connection.cursor()
 
+# Login route
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        print("Login request received")
         data = request.json
-        username = data['Username']  # Get the username from the request
+        username = data['Username']
         provided_password = data['Password']
 
-        # Check the Users table for the provided username and join with Employee_Designation and Promotions to get the position
+        # Query to fetch user details based on username
         query = """
         SELECT u.EmployeeID, u.Password, p.Value
         FROM Users u 
@@ -39,16 +39,12 @@ def login():
 
         if result:
             employee_id, stored_password, position = result
-            
-            # Create a Login instance
+
             login_instance = Login(username, provided_password)
 
-            # Authenticate the user
             if login_instance.authenticate(stored_password):
-                # Set employee details including the employee ID and position
                 login_instance.set_employee_details(employee_id, position)
 
-                # Return user details with redirect URL
                 return jsonify({
                     'message': 'Login successful',
                     'redirect_url': login_instance.redirect_user(),
@@ -61,5 +57,35 @@ def login():
             return jsonify({'error': 'User not found'}), 404
 
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Error during login: {e}")
+        return jsonify({'error': 'An error occurred during login.'}), 500
+
+# Password reset route
+@app.route('/reset_password', methods=['POST'])
+def reset_password():
+    try:
+        data = request.json
+        email = data['email']
+        new_password = data['new_password']
+
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        if not new_password:
+            return jsonify({"error": "New password is required"}), 400
+
+        query = "SELECT * FROM Users WHERE Username = ?"
+        cursor.execute(query, (email,))
+        user = cursor.fetchone()
+
+        if user:
+            update_query = "UPDATE Users SET Password = ? WHERE Username = ?"
+            cursor.execute(update_query, (new_password, email))
+            connection.commit()
+
+            return jsonify({"message": "Password reset successful"}), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+
+    except Exception as e:
+        logging.error(f"Error during password reset: {e}")
+        return jsonify({'error': 'An error occurred during password reset.'}), 500
