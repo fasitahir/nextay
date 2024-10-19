@@ -48,7 +48,7 @@ class _HomePageState extends State<HomePage> {
 
     // Send a POST request to the Flask backend
     final response = await http.post(
-      Uri.parse('http://192.168.168.150:5000/login'),
+      Uri.parse('http://192.168.10.28:5000/login'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'Username': username, 'Password': password}),
     );

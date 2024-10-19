@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class EmployeeUpdate extends StatefulWidget {
   const EmployeeUpdate({super.key});
@@ -9,37 +11,75 @@ class EmployeeUpdate extends StatefulWidget {
 }
 
 class EmployeeUpdateState extends State<EmployeeUpdate> {
-  // Sample employee data
-  List<Map<String, String>> employees = [
-    {
-      'name': 'John Doe',
-      'shift': 'Morning',
-      'role': 'Manager',
-      'email': 'john.doe@example.com',
-    },
-    {
-      'name': 'Jane Smith',
-      'shift': 'Afternoon',
-      'role': 'Chef',
-      'email': 'jane.smith@example.com',
-    },
-    {
-      'name': 'Mark Lee',
-      'shift': 'Night',
-      'role': 'Receptionist',
-      'email': 'mark.lee@example.com',
-    },
-  ];
+  List<Map<String, dynamic>> employees = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchEmployees(); // Fetch employee data when the widget is initialized
+  }
+
+  // Fetch employee data from the API
+  Future<void> fetchEmployees() async {
+    try {
+      final response = await http.get(Uri.parse(
+          'http://192.168.10.28:5000/employees')); // Update with your API URL
+
+      if (response.statusCode == 200) {
+        final List<dynamic> employeeData = json.decode(response.body);
+        setState(() {
+          employees = employeeData
+              .map((emp) => {
+                    'id': emp['id'],
+                    'name':
+                        '${emp['first_name']} ${emp['last_name']}', // Combine first and last names
+                    'shift': emp['shift'],
+                    'role': emp['role'],
+                    'email': emp['email'],
+                  })
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load employees');
+      }
+    } catch (e) {
+      // Handle the error
+      print('Error fetching employees: $e');
+    }
+  }
 
   // Function to delete employee
-  void deleteEmployee(int index) {
-    setState(() {
-      employees.removeAt(index);
-    });
+  Future<void> deleteEmployee(int index) async {
+    try {
+      final employeeId = employees[index]['id'];
+      final response = await http.delete(
+        Uri.parse('http://192.168.10.28:5000/employee/$employeeId'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          employees.removeAt(index); // Remove employee from the UI
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Employee deleted successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to delete employee: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      print('Error deleting employee: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting employee: $e')),
+      );
+    }
   }
 
   // Function to update employee
-  void updateEmployee(int index) {
+  Future<void> updateEmployee(int index) async {
     TextEditingController nameController =
         TextEditingController(text: employees[index]['name']);
     TextEditingController shiftController =
@@ -48,6 +88,9 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
         TextEditingController(text: employees[index]['role']);
     TextEditingController emailController =
         TextEditingController(text: employees[index]['email']);
+    TextEditingController usernameController =
+        TextEditingController(text: employees[index]['username'] ?? '');
+    TextEditingController passwordController = TextEditingController();
 
     showDialog(
       context: context,
@@ -73,21 +116,58 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
                   controller: emailController,
                   decoration: const InputDecoration(labelText: "Email"),
                 ),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(labelText: "Username"),
+                ),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: "Password"),
+                  obscureText: true,
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                setState(() {
-                  employees[index] = {
-                    'name': nameController.text,
+              onPressed: () async {
+                // Call the API to update the employee
+                final response = await http.put(
+                  Uri.parse(
+                      'http://192.168.10.28:5000/employee/${employees[index]['id']}'), // Use your API URL
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    'first_name': nameController.text.split(' ')[0],
+                    'last_name':
+                        nameController.text.split(' ').sublist(1).join(' '),
+                    'email': emailController.text,
                     'shift': shiftController.text,
                     'role': roleController.text,
-                    'email': emailController.text,
-                  };
-                });
-                Navigator.of(context).pop();
+                    'username': usernameController.text,
+                    'password': passwordController.text, // New password field
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  setState(() {
+                    employees[index] = {
+                      'id': employees[index]['id'], // Preserve the ID
+                      'name': nameController.text,
+                      'shift': shiftController.text,
+                      'role': roleController.text,
+                      'email': emailController.text,
+                      'username': usernameController.text,
+                    };
+                  });
+                  Navigator.of(context).pop();
+                } else {
+                  // Handle the error
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'Failed to update employee: ${response.body}')),
+                  );
+                }
               },
               child: const Text("Update"),
             ),
@@ -123,7 +203,6 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
         ),
         child: Column(
           children: [
-            // Manage Employee text aligned to the left
             SizedBox(height: screenHeight * 0.07),
             Padding(
               padding: EdgeInsets.symmetric(
@@ -133,7 +212,7 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
               child: FadeInUp(
                 duration: const Duration(milliseconds: 1000),
                 child: const Align(
-                  alignment: Alignment.centerLeft, // Align text to the left
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     "Manage Employee Data",
                     style: TextStyle(
@@ -146,12 +225,10 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
               ),
             ),
             SizedBox(height: screenHeight * 0.02),
-
-            // White box with Card layout
             Center(
               child: Container(
-                width: screenWidth * 0.9, // 90% of screen width
-                height: screenHeight * 0.75, // 75% of screen height
+                width: screenWidth * 0.9,
+                height: screenHeight * 0.75,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.all(Radius.circular(40)),

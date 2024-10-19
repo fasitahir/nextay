@@ -11,7 +11,7 @@ class Employee:
         self.username = username
         self.password = password
         self.designation = designation
-        self.shift = self.ShiftCode(shift)
+        self.shift = ShiftCode(shift)
         self.dob = dob if dob else datetime.now()  # Optional, current date if not provided
         self.isActive = isActive
         self.addedBy = addedBy
@@ -21,15 +21,16 @@ class Employee:
         self.promotionId = promotionId
         self.promotionDate = promotionDate
 
-    def ShiftCode(self, shift):
-        if shift == 'Morning':
-            return 20
-        elif shift == 'Afternoon':
-            return 21
-        elif shift == 'Night':
-            return 22
-        else:
-            return 0
+
+def ShiftCode(shift):
+    if shift == 'Morning':
+        return 20
+    elif shift == 'Afternoon':
+        return 21
+    elif shift == 'Night':
+        return 22
+    else:
+        return 0
         
         
 class User:
@@ -43,18 +44,18 @@ class Designation:
         self.employeeId = employeeId
         self.promotionId = promotionId
         self.promotionDate = promotionDate
-        self.position = self.getPositionCode(position)
+        self.position = getPositionCode(position)
     
-    def getPositionCode(self, position):
-        if position == 'Manager':
-            return 16
-        elif position == 'Staff':
-            return 15
-        elif position == 'Finance Manager':
-            return 17
-        elif position == 'Janitor':
-            return 19
-        elif position == 'Chef':
-            return 18
-        else:
-            return 0
+def getPositionCode(position):
+    if position == 'Manager':
+        return 16
+    elif position == 'Staff':
+        return 15
+    elif position == 'Finance Manager':
+        return 17
+    elif position == 'Janitor':
+        return 19
+    elif position == 'Chef':
+        return 18
+    else:
+        return 0

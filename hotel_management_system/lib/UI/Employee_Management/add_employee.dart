@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AddEmployeeScreen extends StatefulWidget {
+  const AddEmployeeScreen({super.key});
+
   @override
   _AddEmployeeScreenState createState() => _AddEmployeeScreenState();
 }
@@ -52,7 +54,7 @@ class _AddEmployeeScreenState extends State<AddEmployeeScreen> {
         selectedDesignation != null &&
         selectedShift != null) {
       final response = await http.post(
-        Uri.parse('http://192.168.168.150:5000/employee'),
+        Uri.parse('http://192.168.10.28:5000/employee'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           'first_name': firstName,
