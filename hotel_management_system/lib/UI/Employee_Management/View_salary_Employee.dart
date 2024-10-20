@@ -1,25 +1,55 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ViewSalaryForEmployee extends StatefulWidget {
-  final Employee employee;
-
-  const ViewSalaryForEmployee({super.key, required this.employee});
+  const ViewSalaryForEmployee({super.key});
 
   @override
   _ViewSalaryForEmployeeState createState() => _ViewSalaryForEmployeeState();
 }
 
 class _ViewSalaryForEmployeeState extends State<ViewSalaryForEmployee> {
-  // Simulated salary data for the employee
-  final List<Map<String, dynamic>> salaryRecords = List.generate(
-    10,
-    (index) => {
-      'date': DateTime.now().subtract(Duration(days: index * 30)),
-      'amount': (2000 + index * 100).toDouble(), // Sample salary amounts
-      'incentive': (index * 50).toDouble(), // Sample incentive amounts
-    },
-  );
+  List<Map<String, dynamic>> salaryRecords = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSalaryData();
+  }
+
+  Future<void> fetchSalaryData() async {
+    try {
+      // Retrieve the employeeId from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? employeeId = prefs.getInt('employeeId');
+
+      if (employeeId != null) {
+        // Call the backend API with the employeeId
+        final response = await http.get(
+          Uri.parse(
+              'http://192.168.10.28:5000/employee_salar?employeeId=$employeeId'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          // If the request is successful, update the UI with the salary data
+          List<dynamic> data = json.decode(response.body);
+          setState(() {
+            salaryRecords = List<Map<String, dynamic>>.from(data);
+          });
+        } else {
+          // Handle the case where the request fails
+          print('Failed to load salary data');
+        }
+      } else {
+        print('Employee ID not found');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,9 +111,12 @@ class _ViewSalaryForEmployeeState extends State<ViewSalaryForEmployee> {
                     itemCount: salaryRecords.length,
                     itemBuilder: (context, index) {
                       final record = salaryRecords[index];
-                      final date = DateFormat('yyyy-MM').format(record['date']);
-                      final amount = record['amount'].toStringAsFixed(2);
-                      final incentive = record['incentive'].toStringAsFixed(2);
+                      final firstName = record['first_name'];
+                      final lastName = record['last_name'];
+                      final date = record['pay_date'];
+                      final amount = record['salary'];
+                      final incentive = record['incentive'];
+                      final position = record['Position'];
 
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 10),
@@ -96,14 +129,14 @@ class _ViewSalaryForEmployeeState extends State<ViewSalaryForEmployee> {
                             Icons.money,
                             color: Colors.green[700],
                           ),
-                          title: Text("Month: $date"),
+                          title: Text("Employee: $firstName $lastName"),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text("Pay Date: $date"),
+                              Text("Position: $position"),
                               Text("Salary: \$ $amount"),
                               Text("Incentive: \$ $incentive"),
-                              Text(
-                                  "Designation: ${widget.employee.designation}"),
                             ],
                           ),
                         ),
@@ -125,7 +158,10 @@ class Employee {
   final String firstName;
   final String lastName;
   final String designation;
-  final double salary;
+  final double? salary;
+  final double? incentive;
+  final String payDate;
+  final String contact;
 
   Employee({
     required this.id,
@@ -133,20 +169,21 @@ class Employee {
     required this.lastName,
     required this.designation,
     required this.salary,
+    required this.incentive,
+    required this.payDate,
+    required this.contact,
   });
-}
 
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: ViewSalaryForEmployee(
-      employee: Employee(
-        id: 1,
-        firstName: 'John',
-        lastName: 'Doe',
-        designation: 'Chef',
-        salary: 3000,
-      ),
-    ),
-  ));
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      id: json['id'] ?? 0,
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      designation: json['Position'],
+      salary: json['salary'],
+      incentive: json['incentive'],
+      payDate: json['pay_date'],
+      contact: json['contact'],
+    );
+  }
 }

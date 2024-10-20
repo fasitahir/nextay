@@ -1,315 +1,222 @@
 import 'package:flutter/material.dart';
-// ignore: unused_import
 import 'package:animate_do/animate_do.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-// Room class definition
-class Room {
-  final int id;
-  final String name;
-  final String type;
-  String status;
-  DateTime lastCleaned;
-  bool needsCleaning;
-  double pricePerDay;
-  double? roomArea;
-  int floorNumber;
-  int maxOccupancy;
-  String bedType;
-  DateTime lastMaintenanceDate;
-
-  Room({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.status,
-    required this.lastCleaned,
-    required this.needsCleaning,
-    required this.pricePerDay,
-    this.roomArea,
-    required this.floorNumber,
-    required this.maxOccupancy,
-    required this.bedType,
-    required this.lastMaintenanceDate,
-  });
-}
-
-// Manager Rooms Page
-class ManagerRoomsPage extends StatefulWidget {
-  const ManagerRoomsPage({super.key});
+class RoomUpdate extends StatefulWidget {
+  const RoomUpdate({super.key});
 
   @override
-  _ManagerRoomsPageState createState() => _ManagerRoomsPageState();
+  RoomUpdateState createState() => RoomUpdateState();
 }
 
-class _ManagerRoomsPageState extends State<ManagerRoomsPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  final List<Room> _rooms = List.generate(
-      10,
-      (index) => Room(
-          id: index,
-          name: 'Room ${index + 1}',
-          type: 'Suite',
-          status: 'Available',
-          lastCleaned: DateTime.now(),
-          needsCleaning: false,
-          pricePerDay: 100.0,
-          roomArea: 30.0,
-          floorNumber: 1,
-          maxOccupancy: 2,
-          bedType: 'Queen',
-          lastMaintenanceDate: DateTime.now()));
+class RoomUpdateState extends State<RoomUpdate> {
+  List<Map<String, dynamic>> rooms = [];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 800),
-    );
-
-    // Start animation
-    _controller.forward();
+    fetchRooms(); // Fetch room data when the widget is initialized
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  // Fetch room data from the API
+  Future<void> fetchRooms() async {
+    try {
+      final response = await http.get(Uri.parse(
+          'http://192.168.10.28:5000/rooms')); // Update with your API URL
+
+      if (response.statusCode == 200) {
+        final List<dynamic> roomData = json.decode(response.body);
+        setState(() {
+          rooms = roomData
+              .map((room) => {
+                    'id': room['id'],
+                    'room_type': room['room_type'],
+                    'price_per_day': room['price_per_day'],
+                    'room_area': room['room_area'],
+                    'floor_number': room['floor_number'],
+                    'max_occupancy': room['max_occupancy'],
+                    'bed_type': room['bed_type'],
+                    'room_status': room['room_status'],
+                    'last_cleaned': room['last_cleaned'],
+                    'last_maintenance_date': room['last_maintenance_date'],
+                    'image_id': room['image_id'],
+                  })
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load rooms');
+      }
+    } catch (e) {
+      // Handle the error
+      print('Error fetching rooms: $e');
+    }
   }
 
-  void _addRoom() {
-    String roomName = '';
-    String roomType = '';
-    String roomStatus = 'Available';
-    double pricePerDay = 0.0;
-    double? roomArea;
-    int floorNumber = 1;
-    int maxOccupancy = 1;
-    String bedType = '';
-    // ignore: unused_local_variable
-    DateTime lastMaintenanceDate = DateTime.now();
+  // Function to delete room
+  Future<void> deleteRoom(int index) async {
+    try {
+      final roomId = rooms[index]['id'];
+      final response = await http.delete(
+        Uri.parse('http://192.168.10.28:5000/room/$roomId'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          rooms.removeAt(index); // Remove room from the UI
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Room deleted successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete room: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      print('Error deleting room: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting room: $e')),
+      );
+    }
+  }
+
+  // Function to update room
+  Future<void> updateRoom(int index) async {
+    TextEditingController roomTypeController =
+        TextEditingController(text: rooms[index]['room_type']);
+    TextEditingController priceController =
+        TextEditingController(text: rooms[index]['price_per_day'].toString());
+    TextEditingController roomAreaController =
+        TextEditingController(text: rooms[index]['room_area'].toString());
+    TextEditingController floorNumberController =
+        TextEditingController(text: rooms[index]['floor_number'].toString());
+    TextEditingController maxOccupancyController =
+        TextEditingController(text: rooms[index]['max_occupancy'].toString());
+    TextEditingController bedTypeController =
+        TextEditingController(text: rooms[index]['bed_type']);
+    TextEditingController roomStatusController =
+        TextEditingController(text: rooms[index]['room_status']);
+    TextEditingController lastCleanedController =
+        TextEditingController(text: rooms[index]['last_cleaned']);
+    TextEditingController lastMaintenanceController =
+        TextEditingController(text: rooms[index]['last_maintenance_date']);
+    TextEditingController imageIdController =
+        TextEditingController(text: rooms[index]['image_id'].toString());
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add Room'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(labelText: 'Room Name'),
-                onChanged: (value) {
-                  roomName = value;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Room Type'),
-                onChanged: (value) {
-                  roomType = value;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Price Per Day'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  pricePerDay = double.tryParse(value) ?? 0.0;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Room Area (optional)'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  roomArea = value.isNotEmpty ? double.tryParse(value) : null;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Floor Number'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  floorNumber = int.tryParse(value) ?? 1;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Max Occupancy'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  maxOccupancy = int.tryParse(value) ?? 1;
-                },
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Bed Type'),
-                onChanged: (value) {
-                  bedType = value;
-                },
-              ),
-            ],
+          title: const Text("Update Room"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: roomTypeController,
+                  decoration: const InputDecoration(labelText: "Room Type"),
+                ),
+                TextField(
+                  controller: priceController,
+                  decoration: const InputDecoration(labelText: "Price Per Day"),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: roomAreaController,
+                  decoration: const InputDecoration(labelText: "Room Area"),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: floorNumberController,
+                  decoration: const InputDecoration(labelText: "Floor Number"),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: maxOccupancyController,
+                  decoration: const InputDecoration(labelText: "Max Occupancy"),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: bedTypeController,
+                  decoration: const InputDecoration(labelText: "Bed Type"),
+                ),
+                TextField(
+                  controller: roomStatusController,
+                  decoration: const InputDecoration(labelText: "Room Status"),
+                ),
+                TextField(
+                  controller: lastCleanedController,
+                  decoration: const InputDecoration(labelText: "Last Cleaned"),
+                ),
+                TextField(
+                  controller: lastMaintenanceController,
+                  decoration:
+                      const InputDecoration(labelText: "Last Maintenance Date"),
+                ),
+                TextField(
+                  controller: imageIdController,
+                  decoration: const InputDecoration(labelText: "Image ID"),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                if (roomName.isNotEmpty && roomType.isNotEmpty) {
+              onPressed: () async {
+                // Call the API to update the room
+                final response = await http.put(
+                  Uri.parse(
+                      'http://192.168.10.28:5000/room/${rooms[index]['id']}'), // Use your API URL
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    'room_type': roomTypeController.text,
+                    'price_per_day': double.parse(priceController.text),
+                    'room_area': double.parse(roomAreaController.text),
+                    'floor_number': int.parse(floorNumberController.text),
+                    'max_occupancy': int.parse(maxOccupancyController.text),
+                    'bed_type': bedTypeController.text,
+                    'room_status': roomStatusController.text,
+                    'last_cleaned': lastCleanedController.text,
+                    'last_maintenance_date': lastMaintenanceController.text,
+                    'image_id': int.parse(imageIdController.text),
+                  }),
+                );
+
+                if (response.statusCode == 200) {
                   setState(() {
-                    _rooms.add(Room(
-                      id: _rooms.length,
-                      name: roomName,
-                      type: roomType,
-                      status: roomStatus,
-                      lastCleaned: DateTime.now(),
-                      needsCleaning: false,
-                      pricePerDay: pricePerDay,
-                      roomArea: roomArea,
-                      floorNumber: floorNumber,
-                      maxOccupancy: maxOccupancy,
-                      bedType: bedType,
-                      lastMaintenanceDate: DateTime.now(),
-                    ));
+                    rooms[index] = {
+                      'id': rooms[index]['id'], // Preserve the ID
+                      'room_type': roomTypeController.text,
+                      'price_per_day': double.parse(priceController.text),
+                      'room_area': double.parse(roomAreaController.text),
+                      'floor_number': int.parse(floorNumberController.text),
+                      'max_occupancy': int.parse(maxOccupancyController.text),
+                      'bed_type': bedTypeController.text,
+                      'room_status': roomStatusController.text,
+                      'last_cleaned': lastCleanedController.text,
+                      'last_maintenance_date': lastMaintenanceController.text,
+                      'image_id': int.parse(imageIdController.text),
+                    };
                   });
                   Navigator.of(context).pop();
+                } else {
+                  // Handle the error
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text('Failed to update room: ${response.body}')),
+                  );
                 }
               },
-              child: Text('Add'),
+              child: const Text("Update"),
             ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _editRoom(int index) {
-    String roomName = _rooms[index].name;
-    String roomType = _rooms[index].type;
-    double pricePerDay = _rooms[index].pricePerDay;
-    double? roomArea = _rooms[index].roomArea;
-    int floorNumber = _rooms[index].floorNumber;
-    int maxOccupancy = _rooms[index].maxOccupancy;
-    String bedType = _rooms[index].bedType;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Room'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: TextEditingController(text: roomName),
-                decoration: InputDecoration(labelText: 'Room Name'),
-                onChanged: (value) {
-                  roomName = value;
-                },
-              ),
-              TextField(
-                controller: TextEditingController(text: roomType),
-                decoration: InputDecoration(labelText: 'Room Type'),
-                onChanged: (value) {
-                  roomType = value;
-                },
-              ),
-              TextField(
-                controller: TextEditingController(text: pricePerDay.toString()),
-                decoration: InputDecoration(labelText: 'Price Per Day'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  pricePerDay = double.tryParse(value) ?? 0.0;
-                },
-              ),
-              TextField(
-                controller: TextEditingController(text: roomArea?.toString()),
-                decoration: InputDecoration(labelText: 'Room Area (optional)'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  roomArea = value.isNotEmpty ? double.tryParse(value) : null;
-                },
-              ),
-              TextField(
-                controller: TextEditingController(text: floorNumber.toString()),
-                decoration: InputDecoration(labelText: 'Floor Number'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  floorNumber = int.tryParse(value) ?? 1;
-                },
-              ),
-              TextField(
-                controller:
-                    TextEditingController(text: maxOccupancy.toString()),
-                decoration: InputDecoration(labelText: 'Max Occupancy'),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  maxOccupancy = int.tryParse(value) ?? 1;
-                },
-              ),
-              TextField(
-                controller: TextEditingController(text: bedType),
-                decoration: InputDecoration(labelText: 'Bed Type'),
-                onChanged: (value) {
-                  bedType = value;
-                },
-              ),
-            ],
-          ),
-          actions: [
             TextButton(
               onPressed: () {
-                if (roomName.isNotEmpty && roomType.isNotEmpty) {
-                  setState(() {
-                    _rooms[index] = Room(
-                      id: _rooms[index].id,
-                      name: roomName,
-                      type: roomType,
-                      status: _rooms[index].status,
-                      lastCleaned: _rooms[index].lastCleaned,
-                      needsCleaning: _rooms[index].needsCleaning,
-                      pricePerDay: pricePerDay,
-                      roomArea: roomArea,
-                      floorNumber: floorNumber,
-                      maxOccupancy: maxOccupancy,
-                      bedType: bedType,
-                      lastMaintenanceDate: DateTime.now(),
-                    );
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Save'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deleteRoom(int index) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete Room'),
-          content: Text('Are you sure you want to delete this room?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _rooms.removeAt(index);
-                });
                 Navigator.of(context).pop();
               },
-              child: Text('Yes'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('No'),
+              child: const Text("Cancel"),
             ),
           ],
         );
@@ -323,12 +230,6 @@ class _ManagerRoomsPageState extends State<ManagerRoomsPage>
     double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Manager Room Management',
-            style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.blueGrey[900],
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -341,130 +242,81 @@ class _ManagerRoomsPageState extends State<ManagerRoomsPage>
             ],
           ),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(height: screenHeight * 0.04),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-                child: FadeTransition(
-                  opacity: _controller,
-                  child: const Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Room Management Overview",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                      ),
+        child: Column(
+          children: [
+            SizedBox(height: screenHeight * 0.07),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: screenHeight * 0.01,
+                horizontal: screenWidth * 0.03,
+              ),
+              child: FadeInUp(
+                duration: const Duration(milliseconds: 1000),
+                child: const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Manage Room Data",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.02),
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+            ),
+            SizedBox(height: screenHeight * 0.02),
+            Center(
+              child: Container(
+                width: screenWidth * 0.9,
+                height: screenHeight * 0.75,
                 decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 255, 255, 255),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(50),
-                    topRight: Radius.circular(50),
-                  ),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(40)),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.02,
-                      horizontal: screenWidth * 0.03),
-                  child: Column(
-                    children: [
-                      FadeTransition(
-                        opacity: _controller,
-                        child: ListView.builder(
-                          itemCount: _rooms.length,
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          itemBuilder: (context, index) {
-                            final animation = Tween<Offset>(
-                              begin: Offset(1, 0),
-                              end: Offset(0, 0),
-                            ).animate(
-                              CurvedAnimation(
-                                parent: _controller,
-                                curve: Interval(
-                                  (index / _rooms.length),
-                                  1.0,
-                                  curve: Curves.easeOut,
-                                ),
-                              ),
-                            );
-
-                            final isAvailable =
-                                _rooms[index].status == 'Available';
-                            final isCleaning =
-                                _rooms[index].status == 'Cleaning';
-                            final cardColor = isCleaning
-                                ? Colors.orange[100]
-                                : isAvailable
-                                    ? const Color.fromARGB(255, 135, 194, 211)
-                                    : Colors.red[100];
-
-                            return SlideTransition(
-                              position: animation,
-                              child: Card(
-                                color: cardColor,
-                                margin: EdgeInsets.symmetric(vertical: 8),
-                                child: ListTile(
-                                  leading: Icon(Icons.hotel,
-                                      color: Colors.blueGrey[900]),
-                                  title: Text(_rooms[index].name),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Type: ${_rooms[index].type}"),
-                                      Text("Status: ${_rooms[index].status}"),
-                                      Text(
-                                          "Last Cleaned: ${_rooms[index].lastCleaned}"),
-                                      Text(
-                                          "Price Per Day: ${_rooms[index].pricePerDay}"),
-                                      Text(
-                                          "Bed Type: ${_rooms[index].bedType}"),
-                                    ],
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(Icons.edit,
-                                            color: Colors.blueGrey[900]),
-                                        onPressed: () => _editRoom(index),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.delete,
-                                            color: Colors.red),
-                                        onPressed: () => _deleteRoom(index),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                child: ListView.builder(
+                  itemCount: rooms.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      margin: EdgeInsets.all(10),
+                      elevation: 4,
+                      child: ListTile(
+                        title: Text(
+                          'Room Type: ${rooms[index]['room_type']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Price: \$${rooms[index]['price_per_day']}'),
+                            Text(
+                                'Max Occupancy: ${rooms[index]['max_occupancy']}'),
+                            Text('Status: ${rooms[index]['room_status']}'),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () =>
+                                  updateRoom(index), // Call the update function
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  deleteRoom(index), // Call the delete function
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addRoom,
-        backgroundColor: Colors.blueGrey[900],
-        child: Icon(Icons.add, color: Colors.white),
       ),
     );
   }

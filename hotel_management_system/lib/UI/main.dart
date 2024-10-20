@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'DashBoards/Manager_dashboard.dart' as manager;
 import 'DashBoards/Employee_Dashboard.dart' as employee;
 import 'DashBoards/Accountant_dashboard.dart' as accountant;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(
       const MaterialApp(
@@ -53,6 +54,11 @@ class _HomePageState extends State<HomePage> {
     if (response.statusCode == 200) {
       final jsonResponse = json.decode(response.body);
       String redirectUrl = jsonResponse['redirect_url'];
+      int employeeId = jsonResponse['EmployeeID'];
+
+      // Store EmployeeID in SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('employeeId', employeeId);
 
       currentUser = User.fromJson(jsonResponse);
 
@@ -265,7 +271,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final String newPassword = newPasswordController.text;
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.6:5000/reset_password'),
+      Uri.parse('http://192.168.100.19:5000/reset_password'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'new_password': newPassword}),
     );

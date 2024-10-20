@@ -14,6 +14,7 @@ import 'package:hotel_management_system/UI/FeedBack/feedback_display_screen.dart
     as displayfeedback;
 import 'package:hotel_management_system/UI/FeedBack/feedback_display_screen.dart';
 import 'package:hotel_management_system/UI/Room_Management/Add/UpdateRoom.dart';
+import 'package:hotel_management_system/UI/Room_Management/Add/add_room.dart';
 import 'package:hotel_management_system/UI/main.dart';
 
 class ManagerHomePage extends StatelessWidget {
@@ -215,9 +216,9 @@ class ManagerHomePage extends StatelessWidget {
                               // MarkAttendance(),
                             ),
                             _buildFunctionalityBox(context, 'Add Room',
-                                Icons.add_home, ManagerRoomsPage()),
+                                Icons.add_home, AddRoomScreen()),
                             _buildFunctionalityBox(context, 'Update Room',
-                                Icons.home_repair_service, ManagerRoomsPage()),
+                                Icons.home_repair_service, RoomUpdate()),
                             _buildFunctionalityBox(context, 'View Salary',
                                 Icons.money, const ViewSalaryForManager()),
                             _buildFunctionalityBox(

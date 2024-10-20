@@ -7,7 +7,7 @@ import 'package:hotel_management_system/UI/Employee_Management/View_salary_Emplo
 import 'package:hotel_management_system/UI/FeedBack/AddFeedback.dart';
 import 'package:hotel_management_system/UI/Room_Management/Rooms_CHeckedIn/Out.dart';
 import 'package:hotel_management_system/UI/main.dart';
-
+// import 'package:hotel_management_system/DL/login.py'; 
 class EmployeeHomePage extends StatelessWidget {
   final String managerName;
 
@@ -121,20 +121,14 @@ class EmployeeHomePage extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            _buildFunctionalityBox(
-                              context,
-                              'View Salary',
-                              Icons.money,
-                              salary.ViewSalaryForEmployee(
-                                employee: salary.Employee(
-                                  id: 1,
-                                  firstName: 'John',
-                                  lastName: 'Doe',
-                                  designation: 'Chef',
-                                  salary: 3000,
-                                ),
-                              ),
-                            ),
+                            
+                           _buildFunctionalityBox(
+                            context,
+                            'View Salary',
+                            Icons.money,
+                             salary.ViewSalaryForEmployee(), // No employeeId passed here
+                          ),
+
                             _buildFunctionalityBox(
                               context,
                               'Take Feedback',

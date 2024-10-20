@@ -90,7 +90,8 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
 
   Future<void> fetchRooms() async {
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:5000/rooms'));
+      final response =
+          await http.get(Uri.parse('http://192.168.10.28:5000/rooms'));
 
       if (response.statusCode == 200) {
         List<dynamic> roomData = json.decode(response.body);
@@ -119,7 +120,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
     try {
       final response = await http.put(
         Uri.parse(
-            'http://192.168.10.24:5000/rooms/${_rooms[index].id}/checkin'),
+            'http://192.168.10.28:5000/rooms/${_rooms[index].id}/checkin'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -138,7 +139,7 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
   void _cleanRoom(int index) async {
     try {
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/clean'),
+        Uri.parse('http://192.168.10.28:5000/rooms/${_rooms[index].id}/clean'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -169,7 +170,8 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
 
     try {
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:5000/rooms/${_rooms[index].id}/checkout'),
+        Uri.parse(
+            'http://192.168.10.28:5000/rooms/${_rooms[index].id}/checkout'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -393,78 +395,6 @@ class _StaffRoomsPageState extends State<StaffRoomsPage>
       ),
     );
   }
-
-  // Widget _buildRoomList(double screenHeight) {
-  //   return SizedBox(
-  //     height: screenHeight * 0.5,
-  //     child: ListView.builder(
-  //       itemCount: _rooms.length,
-  //       itemBuilder: (context, index) {
-  //         final animation = Tween<Offset>(
-  //           begin: Offset(1, 0),
-  //           end: Offset(0, 0),
-  //         ).animate(
-  //           CurvedAnimation(
-  //             parent: _controller,
-  //             curve: Interval(
-  //               (index / _rooms.length),
-  //               1.0,
-  //               curve: Curves.easeOut,
-  //             ),
-  //           ),
-  //         );
-
-  //         final isAvailable = _rooms[index].status == 'Available';
-  //         final isCleaning = _rooms[index].status == 'Cleaning';
-  //         final cardColor = isCleaning
-  //             ? Colors.orange[100]
-  //             : isAvailable
-  //                 ? Colors.green[100]
-  //                 : Colors.red[100];
-
-  //         return SlideTransition(
-  //           position: animation,
-  //           child: Card(
-  //             color: cardColor,
-  //             margin: EdgeInsets.symmetric(vertical: 8),
-  //             child: ListTile(
-  //               title: Text("Room ${_rooms[index].id}"),
-  //               subtitle: Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: [
-  //                   Text("Type: ${_rooms[index].type}"),
-  //                   Text("Status: ${_rooms[index].status}"),
-  //                   Text("Last Cleaned: ${_rooms[index].lastCleaned}"),
-  //                   Text("Price Per Day: ${_rooms[index].pricePerDay}"),
-  //                   Text("Bed Type: ${_rooms[index].bedType}"),
-  //                 ],
-  //               ),
-  //               trailing: Row(
-  //                 mainAxisSize: MainAxisSize.min,
-  //                 children: [
-  //                   if (isAvailable)
-  //                     IconButton(
-  //                       icon: Icon(Icons.check_box),
-  //                       onPressed: () => _checkInRoom(index),
-  //                     ),
-  //                   if (!isAvailable && !isCleaning)
-  //                     IconButton(
-  //                       icon: Icon(Icons.exit_to_app),
-  //                       onPressed: () => _checkOutRoom(index),
-  //                     ),
-  //                   IconButton(
-  //                     icon: Icon(Icons.cleaning_services),
-  //                     onPressed: () => _cleanRoom(index),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //           ),
-  //         );
-  //       },
-  //     ),
-  //   );
-  // }
 
   Widget _buildSummaryCard(String title, String count) {
     return Padding(

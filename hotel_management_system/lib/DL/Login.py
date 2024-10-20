@@ -50,6 +50,7 @@ def login():
                     'redirect_url': login_instance.redirect_user(),
                     'Username': username,
                     'Position': position,
+                    'EmployeeID': employee_id
                 }), 200
             else:
                 return jsonify({'error': 'Incorrect password'}), 401

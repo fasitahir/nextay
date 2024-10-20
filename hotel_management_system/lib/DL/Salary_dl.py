@@ -5,6 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import lib.BL.employee as employeeFunctions 
+# from Login import session
 
 # Create a Flask blueprint for salary operations
 app = Blueprint('salary', __name__)
@@ -58,7 +59,8 @@ def pay_salary():
         incentive = data.get('incentive', None)
         incentive_description = data.get('incentive_description', None)
         pay_date = data['pay_date']
-        paid_by = None
+        paid_by = None  # Or fetch dynamically
+        increment_date = datetime.now() if incentive else None
 
         # Convert pay_date to datetime object
         pay_date = datetime.strptime(pay_date, '%Y-%m-%d').date()
@@ -73,8 +75,8 @@ def pay_salary():
         # Insert salary record into the Salary table
         cursor.execute("""
         INSERT INTO Salary (EmployeeId, PayDate, Incentive, IncentiveDescription, IncrementDate, Paidby)
-        VALUES (?, ?, ?, ?, NULL, ?)
-        """, (employee_id, pay_date, incentive, incentive_description, paid_by))
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (employee_id, pay_date, incentive, incentive_description, increment_date, paid_by))
 
         # Commit the transaction
         connection.commit()
@@ -84,4 +86,97 @@ def pay_salary():
     except Exception as e:
         print(f"Error paying salary: {e}")
         connection.rollback()  # Rollback in case of error
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+
+@app.route('/employee_salar', methods=['GET'])
+def get_salary_for_employee():
+    try:
+        employee_id = request.args.get('employeeId')
+        
+        query = """
+            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, s.PayDate, s.Incentive
+            FROM Employee e
+            INNER JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
+            JOIN Lookup l ON d.Position = l.Id
+            JOIN Salary s ON e.Id = s.EmployeeId
+            WHERE s.EmployeeId = ?
+        """
+        cursor.execute(query, (employee_id,))
+        result = cursor.fetchall()
+
+        salary_data = []
+        for row in result:
+            salary_data.append({
+                'id': row[0],
+                'first_name': row[1],
+                'last_name': row[2],
+                'salary': float(row[3]),
+                'contact': row[4],
+                'is_paid': row[5],
+                'Position': row[6],
+                'pay_date': row[7],
+                'incentive': row[8],
+            })
+
+        return jsonify(salary_data), 200
+
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        return jsonify({'error': 'An error occurred fetching salary data.'}), 500
+
+
+
+
+@app.route('/employee_Salary_forManager', methods=['GET'])
+def get_employees_Salary_for_manager():
+    try:
+        # Get month and year from request arguments
+        month = request.args.get('month', default=None, type=int)
+        year = request.args.get('year', default=None, type=int)
+
+        if month is None or year is None:
+            # Fetch all employees and salary data if no month and year are provided
+            cursor.execute("""
+            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, s.PayDate, s.Incentive
+            FROM Employee e
+            INNER JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
+            JOIN Lookup l ON d.Position = l.Id
+            JOIN Salary s ON e.Id = s.EmployeeId
+            """)
+        else:
+            # Fetch data for a specific month and year
+            cursor.execute("""
+            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, s.PayDate, s.Incentive
+            FROM Employee e
+            INNER JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
+            JOIN Lookup l ON d.Position = l.Id
+            JOIN Salary s ON e.Id = s.EmployeeId
+            WHERE MONTH(s.PayDate) = ? AND YEAR(s.PayDate) = ?
+            """, (month, year))
+
+        employees = cursor.fetchall()
+        employee_list = []
+
+        for emp in employees:
+            employee_list.append({
+                'id': emp[0],
+                'first_name': emp[1],
+                'last_name': emp[2],
+                'salary': float(emp[3]),
+                'contact': emp[4],
+                'is_paid': emp[5],
+                'Position': emp[6],
+                'pay_date': emp[7],
+                'incentive': emp[8],
+            })
+
+        return jsonify(employee_list), 200
+
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
         return jsonify({'error': str(e)}), 500

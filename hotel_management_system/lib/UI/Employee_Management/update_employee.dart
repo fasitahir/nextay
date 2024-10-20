@@ -23,7 +23,7 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
   Future<void> fetchEmployees() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://192.168.10.28:5000/employees')); // Update with your API URL
+          'http://192.168.100.19:5000/employees')); // Update with your API URL
 
       if (response.statusCode == 200) {
         final List<dynamic> employeeData = json.decode(response.body);
@@ -53,7 +53,7 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
     try {
       final employeeId = employees[index]['id'];
       final response = await http.delete(
-        Uri.parse('http://192.168.10.28:5000/employee/$employeeId'),
+        Uri.parse('http://192.168.100.19:5000/employee/$employeeId'),
         headers: {"Content-Type": "application/json"},
       );
 
