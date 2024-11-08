@@ -1,0 +1,56 @@
+----------------------------------Add------------------------------------
+1: Add employee with all required fields correctly filled
+2: Attempt to add employee with missing mandatory fields
+3: Add employee with invalid data in fields (e.g., invalid email)
+4: Attempt to add duplicate employee profile
+5: Verify system logging and audit trail for added employees
+6: Add employee with minimum required information
+7: Test system behavior when adding multiple employees in rapid succession
+8: Validate max character limits on employee name field
+
+-------------------------------Delete------------------------------------
+1: Delete an existing employee
+2: Attempt to delete a non-existent employee
+3: Confirm deletion process has an additional verification step
+4: Confirm deletion process has an additional verification step
+5: Verify system logging for deleted employee
+6: Check system response for deletion without internet connection (if web-based)
+-----------------------------Update--------------------------------------
+1: Update employee profile with valid data
+2: Attempt to update with invalid data
+3: Attempt to update a non-existent employee
+4: Verify update reflects immediately in the employee list
+5: Verify system logging for updated employee
+6: Validate character limits for each editable field
+7: Attempt to update while another user edits the same profile
+----------------------------Manage Shift---------------------------------
+1: View employees scheduled for the current shift
+2: Validate the employee shift change after updating
+
+-----------------Performance Testing Test Scenarios----------------------
+1: Check if the page load time is within the acceptable range.
+2: Check if the page loads on slow connections.
+3: Check the response time for any action under light, normal, moderate, and heavy load conditions.
+4: Check the performance of database stored procedures and triggers.
+5: Check for Stress testing of the application.
+6: Check for load testing of the application.
+
+
+---------------------Database Testing Test Scenarios----------------------
+1: Check values for columns that are not accepting null values.
+2: Check for data integrity. Data should be stored in single or multiple tables based on the design.
+3: Check if data is committed to the database only when the operation is successfully completed.
+4: Check numeric fields with minimum, maximum, and float values.
+5: Check numeric fields with negative values (for both acceptance and non-acceptance).
+6: Check if the radio button and drop-down list options are saved correctly in the database.
+7: Check if all table constraints like Primary key, Foreign key, etc. are implemented correctly.
+8: Input field leading and trailing spaces should be truncated before committing data to the database.
+
+
+--------------------Security Testing Test Scenarios-------------------------
+1: Check for SQL injection attacks.
+2: Page crash should not reveal application or server info. The error page should be displayed for this.
+3: All credentials should be transferred over to an encrypted channel.
+4: Check for role base authentication
+5: Passwords and other sensitive fields should be masked while typing.
+6: Test unauthorized application access by manipulating variable values in the browser address bar.

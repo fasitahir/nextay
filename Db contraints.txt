@@ -1,0 +1,111 @@
+-----------------User-----------------------
+Username: Not Null, No special character, Username can not be duplicate 
+Password: Not Null, Caps + digit Necessary  
+---------------------------------------------
+
+
+
+----------------Attendance-------------------
+EmployeeID + data --> Composite key                                         
+Attendance status Not Null
+
+---------------------------------------------
+
+
+
+-----------------Employee--------------------
+FirstName: Not Null, No digit + No special Character(Only alphabet)
+LastName: Null, No digit + No special Character(Only alphabet)
+CNIC: Not Null, INT, Length should be 13 no more or less, unique
+Contact Number: Not Null, INT, Length should be 11 no more or less, unique
+Email: Not Null, format should be like abc@xyz.com, unique
+Shift: Not Null
+IsActive: Not Null
+IsPaid: Not Null
+DOB: Not Null
+Salary Amount: Minimum: 20000 Maximum: 10000000, Not Null
+AddedBy: Not Null  
+---------------------------------------------
+
+
+
+-----------------Salary----------------------
+EmployeeId: Not Null
+PayDate: Not Null
+PaidBy: Not Null
+Incentive: can not be less than 0, can be null
+---------------------------------------------
+
+
+
+-------------------Customer Table------------
+FirstName: Not Null, No digit + No special Character(Only alphabet)
+LastName: Null, No digit + No special Character(Only alphabet)
+Contact Number: Not Null, INT, Length should be 11 no more or less
+Email: Not Null, format should be like abc@xyz.com
+IDType: Not Null
+-----------------------------------------------
+
+
+
+-------------------FeedBack---------------------
+Type: Not Null
+DateSubmitted: Not Null
+Status: Drop this
+Rating: Not Null, between 1 to 5
+CustomerId: Not Null
+-------------------------------------------------
+
+
+
+-------------------Earning------------------------
+Date: NotNull
+Amount: Not Null, Only floats not string, it can not be less than 0
+Source: Not Null
+--------------------------------------------------
+
+
+
+-----------------Expense--------------------------
+Date: Not Null
+Category: Not Null
+Amount: Not Null, >0
+--------------------------------------------------
+
+
+-----------------Rooms----------------------------
+RoomType: Not Null
+RoomStatus: Not Null
+PricePerDay: Not null, >0
+RoomArea: Null, >0, Float
+FloorNumber: Not Null, >0
+MaxOccupancy: Not Null, >0
+BedType: Not Null
+AddedBy: Not Null
+---------------------------------------------------
+
+
+
+--------------------Amenities----------------------
+Name: Not Null
+RoomId: Not Null
+---------------------------------------------------
+
+
+--------------------Booking------------------------
+CustomerId: Not Null
+RoomID : Not Null
+CheckInTime: Not Null
+PaymentStatus: Not Null
+PaymentMethod: Not Null
+NumberOfGuests: >0, Cannot be greater than  MaxOccupancy (of the Room...Join the Room with room ID and get max occupancy of that room)
+TotalAmount: >0, Digits only, Float
+BookedBy: Not Null (change name from BookedBy to AddedBy)
+-----------------------------------------------------
+
+
+
+--------------------Employee Designation----------------
+EmployeeId: Not Null
+Position: Not Null
+--------------------------------------------------------
