@@ -8,6 +8,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 final String? Ip = dotenv.env['IP'];
 final String? Port = dotenv.env['PORT'];
 
+final List<String> designations = [
+  'Manager',
+  'Staff',
+  'Finance Manager',
+  'Chef',
+  'Janitor'
+];
+
 class EmployeeManagement extends StatefulWidget {
   const EmployeeManagement({super.key});
 
@@ -96,7 +104,8 @@ class _EmployeeManagementState extends State<EmployeeManagement> {
                 onChanged: (value) {
                   setState(() {
                     // Check for non-numeric characters or invalid salary format
-                    if (RegExp(r'[^0-9]').hasMatch(value)) {
+                    if (RegExp(r'[^0-9.]').hasMatch(value) ||
+                        RegExp(r'\.\d*\.\d*').hasMatch(value)) {
                       errorMessage = "Enter a valid salary (numbers only)";
                     } else {
                       errorMessage = null;
@@ -459,28 +468,12 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
                         "Select Designation:",
                         style: const TextStyle(fontSize: 18),
                       ),
-                      DropdownButton<String>(
-                        value: selectedDesignation,
-                        items: ['Chef', 'Janitor', 'Staff', 'Manager']
-                            .map((designation) {
-                          return DropdownMenuItem<String>(
-                            value: designation,
-                            child: Text(designation),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedDesignation = newValue;
-                          });
-                        },
-                        isExpanded: true,
-                        style:
-                            const TextStyle(fontSize: 18, color: Colors.black),
-                        underline: Container(
-                          height: 2,
-                          color: Colors.blueGrey[700],
-                        ),
-                      ),
+                      buildDropdown("Select Designation", designations,
+                          (value) {
+                        setState(() {
+                          selectedDesignation = value;
+                        });
+                      }, selectedDesignation),
                       SizedBox(height: screenHeight * 0.02),
                       Text(
                         "Enter New Salary:",
@@ -499,7 +492,8 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
                         ),
                         onChanged: (value) {
                           setState(() {
-                            if (RegExp(r'[^0-9]').hasMatch(value)) {
+                            if (RegExp(r'[^0-9.]').hasMatch(value) ||
+                                RegExp(r'\.\d*\.\d*').hasMatch(value)) {
                               errorMessage =
                                   "Enter a valid salary (numbers only)";
                             } else {
@@ -567,6 +561,40 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Build Dropdown Menu with Validation
+  Widget buildDropdown(String hintText, List<String> items,
+      Function(String?) onChanged, String? selectedValue) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: selectedValue,
+        decoration: InputDecoration(
+          labelText: hintText,
+          labelStyle: const TextStyle(color: Colors.grey),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide.none,
+          ),
+        ),
+        items: items.map((item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(item),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a $hintText';
+          }
+          return null;
+        },
       ),
     );
   }

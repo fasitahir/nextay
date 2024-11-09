@@ -20,7 +20,7 @@ cursor = connection.cursor()
 def get_employees():
     try:
         selected_date = request.args.get('date')
-        print(selected_date)
+        print("Value for date is: " , selected_date)
         cursor.execute("""
         SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value
         FROM Employee e
