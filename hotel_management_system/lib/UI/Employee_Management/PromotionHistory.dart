@@ -1,16 +1,48 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String? Ip = dotenv.env['IP'];
+final String? Port = dotenv.env['PORT'];
 
 class EmployeeManagementHistory extends StatefulWidget {
-  final List<Employee> employees;
-
-  const EmployeeManagementHistory({super.key, required this.employees});
+  const EmployeeManagementHistory({super.key});
 
   @override
   _EmployeeManagementState createState() => _EmployeeManagementState();
 }
 
 class _EmployeeManagementState extends State<EmployeeManagementHistory> {
+  List<Employee> _employees = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEmployees();
+  }
+
+  // Fetch employee data from the API
+  Future<void> _fetchEmployees() async {
+    try {
+      final response = await http.get(Uri.parse('http://$Ip:$Port/promotion'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _employees = data
+              .map((employeeData) => Employee.fromJson(employeeData))
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load employees');
+      }
+    } catch (e) {
+      print("Error fetching employees: $e");
+    }
+  }
+
   void _viewPromotionHistory(Employee employee) {
     Navigator.push(
       context,
@@ -74,50 +106,54 @@ class _EmployeeManagementState extends State<EmployeeManagementHistory> {
                     vertical: screenHeight * 0.02,
                     horizontal: screenWidth * 0.03,
                   ),
-                  child: ListView.builder(
-                    itemCount: widget.employees.length,
-                    itemBuilder: (context, index) {
-                      final employee = widget.employees[index];
+                  child: _employees.isEmpty
+                      ? Center(child: CircularProgressIndicator())
+                      : ListView.builder(
+                          itemCount: _employees.length,
+                          itemBuilder: (context, index) {
+                            final employee = _employees[index];
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${employee.firstName} ${employee.lastName}",
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "${employee.firstName} ${employee.lastName}",
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                        "Designation: ${employee.designation}"),
+                                    Text(
+                                        "Salary: \$${employee.salary.toStringAsFixed(2)}"),
+                                    Text("Email: ${employee.email}"),
+                                    const SizedBox(height: 10),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          _viewPromotionHistory(employee),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blueGrey[600],
+                                      ),
+                                      child: const Text(
+                                        "View Promotion History",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Text("Designation: ${employee.designation}"),
-                              Text(
-                                  "Salary: \$${employee.salary.toStringAsFixed(2)}"),
-                              const SizedBox(height: 10),
-                              ElevatedButton(
-                                onPressed: () =>
-                                    _viewPromotionHistory(employee),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueGrey[600],
-                                ),
-                                child: const Text(
-                                  "View Promotion History",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ),
             ),
@@ -220,6 +256,7 @@ class Employee {
   String lastName;
   String designation;
   double salary;
+  String email;
   List<Promotion> promotionHistory;
 
   Employee({
@@ -227,8 +264,20 @@ class Employee {
     required this.lastName,
     required this.designation,
     required this.salary,
+    required this.email,
     List<Promotion>? promotionHistory,
   }) : promotionHistory = promotionHistory ?? [];
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      designation: json['designation'],
+      salary: json['salary'],
+      email: json['email'],
+      promotionHistory: [], // Empty for now, you can fetch it later if needed
+    );
+  }
 }
 
 class Promotion {
@@ -244,4 +293,3 @@ class Promotion {
     required this.newSalary,
   });
 }
-

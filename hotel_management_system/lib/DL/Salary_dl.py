@@ -19,12 +19,15 @@ cursor = connection.cursor()
 @app.route('/employee_data', methods=['GET'])
 def get_employees():
     try:
+        selected_date = request.args.get('date')
+        print(selected_date)
         cursor.execute("""
         SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value
         FROM Employee e
         INNER JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
         join Lookup l on d.Position=l.Id
-                       
+        WHERE isActive != 24
+        
 
         """)
         
@@ -40,6 +43,7 @@ def get_employees():
                 'contact': emp[4],
                 'is_paid': emp[5],
                 'Position': emp[6],
+
             })
         
         return jsonify(employee_list), 200
@@ -59,7 +63,7 @@ def pay_salary():
         incentive = data.get('incentive', None)
         incentive_description = data.get('incentive_description', None)
         pay_date = data['pay_date']
-        paid_by = None  # Or fetch dynamically
+        paid_by = data['paidBy']  # Or fetch dynamically
         increment_date = datetime.now() if incentive else None
 
         # Convert pay_date to datetime object

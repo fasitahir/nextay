@@ -1,15 +1,55 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Define the Employee model to hold employee data
+
+final String? Ip = dotenv.env['IP'];
+final String? Port = dotenv.env['PORT'];
 
 class EmployeeManagement extends StatefulWidget {
-  final List<Employee> employees;
-
-  const EmployeeManagement({super.key, required this.employees});
+  const EmployeeManagement({super.key});
 
   @override
   _EmployeeManagementState createState() => _EmployeeManagementState();
 }
 
 class _EmployeeManagementState extends State<EmployeeManagement> {
+  List<Employee> employees = []; // Store the list of employees
+  bool isLoading = true; // Loading state flag
+
+  // Fetch employee data from the backend
+  Future<void> _fetchEmployees() async {
+    final url = 'http://$Ip:$Port/promotion'; // Replace with your backend URL
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        // Parse the response and update the UI
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          employees =
+              data.map((employee) => Employee.fromJson(employee)).toList();
+          isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load employees');
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print("Error fetching employees: $e");
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEmployees(); // Fetch employees when the widget is created
+  }
+
   void _promoteEmployee(Employee employee) {
     showDialog(
       context: context,
@@ -24,40 +64,128 @@ class _EmployeeManagementState extends State<EmployeeManagement> {
   void _changeSalary(Employee employee) {
     TextEditingController salaryController =
         TextEditingController(text: employee.salary.toString());
+    String? errorMessage; // Variable to hold error message
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Change Salary for ${employee.firstName}'),
-          content: TextField(
-            controller: salaryController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: "Enter new salary"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  double newSalary =
-                      double.tryParse(salaryController.text.trim()) ??
-                          employee.salary;
-                  employee.salary = newSalary;
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text("Save"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Cancel"),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Change Salary for ${employee.firstName}'),
+              content: TextField(
+                controller: salaryController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: "Enter new salary",
+                  errorText:
+                      errorMessage, // Display validation message within the box
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: errorMessage == null ? Colors.grey : Colors.red,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: errorMessage == null ? Colors.blue : Colors.red,
+                    ),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    // Check for non-numeric characters or invalid salary format
+                    if (RegExp(r'[^0-9]').hasMatch(value)) {
+                      errorMessage = "Enter a valid salary (numbers only)";
+                    } else {
+                      errorMessage = null;
+                    }
+                  });
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    final inputText = salaryController.text.trim();
+                    final newSalary = double.tryParse(inputText);
+
+                    if (newSalary == null) {
+                      setState(() {
+                        errorMessage = "Enter a valid salary (numbers only)";
+                      });
+                    } else if (newSalary < 20000 || newSalary > 10000000) {
+                      setState(() {
+                        errorMessage =
+                            "Salary must be between 20,000 & 10,000,000.";
+                      });
+                    } else {
+                      // Update employee salary if valid and within range
+                      setState(() {
+                        employee.salary = newSalary;
+                      });
+                      await _updateEmployeeSalary(employee);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text("Save"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Cancel"),
+                ),
+              ],
+            );
+          },
         );
       },
     );
+  }
+
+// Function to update the salary in the database
+  Future<void> _updateEmployeeSalary(Employee employee) async {
+    final url =
+        'http://$Ip:$Port/salary_update'; // Replace with the actual endpoint URL
+    final data = {
+      'email': employee.email,
+      'salary': employee.salary, // New Salary
+    };
+
+    try {
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text("Salary updated to ${employee.salary.toStringAsFixed(2)}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final error = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${error['error']}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error updating salary: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -66,119 +194,131 @@ class _EmployeeManagementState extends State<EmployeeManagement> {
     double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            colors: [
-              Colors.blueGrey[900] ?? Colors.blueGrey,
-              Colors.blueGrey[700] ?? Colors.blueGrey,
-              Colors.blueGrey[400] ?? Colors.blueGrey,
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            SizedBox(height: screenHeight * 0.07),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                vertical: screenHeight * 0.01,
-                horizontal: screenWidth * 0.03,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Employee Management",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                  ),
+      body: isLoading
+          ? Center(
+              child:
+                  CircularProgressIndicator()) // Show loading indicator while fetching
+          : Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  colors: [
+                    Colors.blueGrey[900] ?? Colors.blueGrey,
+                    Colors.blueGrey[700] ?? Colors.blueGrey,
+                    Colors.blueGrey[400] ?? Colors.blueGrey,
+                  ],
                 ),
               ),
-            ),
-            SizedBox(height: screenHeight * 0.02),
-            Expanded(
-              child: Container(
-                width: screenWidth * 0.9, // 90% of screen width
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(50),
-                    topRight: Radius.circular(50),
-                  ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: screenHeight * 0.02,
-                    horizontal: screenWidth * 0.03,
-                  ),
-                  child: ListView.builder(
-                    itemCount: widget.employees.length,
-                    itemBuilder: (context, index) {
-                      final employee = widget.employees[index];
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+              child: Column(
+                children: [
+                  SizedBox(height: screenHeight * 0.07),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.01,
+                      horizontal: screenWidth * 0.03,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Employee Management",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${employee.firstName} ${employee.lastName}",
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: screenHeight * 0.02),
+                  Expanded(
+                    child: Container(
+                      width: screenWidth * 0.9, // 90% of screen width
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(50),
+                          topRight: Radius.circular(50),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: screenHeight * 0.02,
+                          horizontal: screenWidth * 0.03,
+                        ),
+                        child: ListView.builder(
+                          itemCount: employees.length,
+                          itemBuilder: (context, index) {
+                            final employee = employees[index];
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "${employee.firstName} ${employee.lastName}",
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                        "Designation: ${employee.designation}"),
+                                    Text(
+                                        "Salary: ${employee.salary.toStringAsFixed(2)}"),
+                                    Text("Email: ${employee.email}"),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              _promoteEmployee(employee),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Colors.blueGrey[600],
+                                          ),
+                                          child: const Text(
+                                            "Promote",
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              _changeSalary(employee),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Colors.blueGrey[600],
+                                          ),
+                                          child: const Text(
+                                            "Change Salary",
+                                            style:
+                                                TextStyle(color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Text("Designation: ${employee.designation}"),
-                              Text(
-                                  "Salary: \$${employee.salary.toStringAsFixed(2)}"),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () => _promoteEmployee(employee),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blueGrey[600],
-                                    ),
-                                    child: const Text(
-                                      "Promote",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () => _changeSalary(employee),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blueGrey[600],
-                                    ),
-                                    child: const Text(
-                                      "Change Salary",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -195,6 +335,7 @@ class PromoteEmployee extends StatefulWidget {
 class _PromoteEmployeeState extends State<PromoteEmployee> {
   String? selectedDesignation;
   final TextEditingController salaryController = TextEditingController();
+  String? errorMessage; // To hold validation message
 
   @override
   void initState() {
@@ -207,6 +348,49 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
   void dispose() {
     salaryController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updatePromotion(Employee employee) async {
+    final url = 'http://$Ip:$Port/promotion_update';
+    final data = {
+      'email': employee.email,
+      'salary': employee.salary,
+      'designation': employee.designation,
+    };
+
+    try {
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                "${employee.firstName} has been promoted to $selectedDesignation with a salary of \$${employee.salary.toStringAsFixed(2)}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final error = json.decode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${error['error']}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error updating promotion: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -250,7 +434,7 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
             SizedBox(height: screenHeight * 0.02),
             Expanded(
               child: Container(
-                width: screenWidth * 0.9, // 90% of screen width
+                width: screenWidth * 0.9,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -306,33 +490,57 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
                         controller: salaryController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          hintText: "Enter salary in USD",
+                          hintText: "Enter salary in PKR",
+                          errorText:
+                              errorMessage, // Display error in the input box
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        onChanged: (value) {
+                          setState(() {
+                            if (RegExp(r'[^0-9]').hasMatch(value)) {
+                              errorMessage =
+                                  "Enter a valid salary (numbers only)";
+                            } else {
+                              errorMessage = null;
+                            }
+                          });
+                        },
                       ),
                       SizedBox(height: screenHeight * 0.04),
                       Center(
                         child: MaterialButton(
                           onPressed: () {
+                            // Parse and validate the salary input
                             double newSalary =
                                 double.tryParse(salaryController.text.trim()) ??
                                     widget.employee.salary;
 
+                            if (newSalary < 20000 || newSalary > 10000000) {
+                              setState(() {
+                                errorMessage =
+                                    "Salary must be between 20,000 & 10,000,000.";
+                              });
+                              return;
+                            }
+
+                            // Check if there's any actual change
+                            // if (selectedDesignation == widget.employee.designation && newSalary == widget.employee.salary) {
+                            //   setState(() {
+                            //     errorMessage = "At least one field must be changed.";
+                            //   });
+                            //   return;
+                            // }
+
+                            // Update employee data and call the API if valid
                             setState(() {
                               widget.employee.salary = newSalary;
                               widget.employee.designation =
                                   selectedDesignation!;
                             });
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    "${widget.employee.firstName} has been promoted to $selectedDesignation with a salary of \$${newSalary.toStringAsFixed(2)}"),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
+                            _updatePromotion(widget.employee);
                             Navigator.of(context).pop();
                           },
                           height: 50,
@@ -365,18 +573,27 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
 }
 
 class Employee {
-  final int id;
   final String firstName;
   final String lastName;
   String designation;
   double salary;
+  final String email;
 
   Employee({
-    required this.id,
     required this.firstName,
     required this.lastName,
     required this.designation,
     required this.salary,
+    required this.email,
   });
-}
 
+  // Factory method to create Employee from JSON
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+        firstName: json['first_name'],
+        lastName: json['last_name'],
+        salary: json['salary'],
+        designation: json['designation'],
+        email: json['email']);
+  }
+}

@@ -152,66 +152,13 @@ class ManagerHomePage extends StatelessWidget {
                               context,
                               'Employees Promotion',
                               Icons.trending_up,
-                              promote.EmployeeManagement(
-                                employees: [
-                                  promote.Employee(
-                                      id: 1,
-                                      firstName: 'John',
-                                      lastName: 'Doe',
-                                      designation: 'Staff',
-                                      salary: 3000),
-                                  promote.Employee(
-                                      id: 2,
-                                      firstName: 'Jane',
-                                      lastName: 'Smith',
-                                      designation: 'Manager',
-                                      salary: 5000),
-                                  promote.Employee(
-                                      id: 3,
-                                      firstName: 'Bob',
-                                      lastName: 'Johnson',
-                                      designation: 'Chef',
-                                      salary: 4000),
-                                ],
-                              ),
+                              promote.EmployeeManagement(),
                             ),
                             _buildFunctionalityBox(
                               context,
                               'View Promotion History',
                               Icons.history,
-                              PromotionHistory.EmployeeManagementHistory(
-                                employees: [
-                                  PromotionHistory.Employee(
-                                    firstName: 'John',
-                                    lastName: 'Doe',
-                                    designation: 'Manager',
-                                    salary: 50000,
-                                    promotionHistory: [
-                                      PromotionHistory.Promotion(
-                                        date: DateTime.now(),
-                                        oldDesignation: 'Staff',
-                                        newDesignation: 'Manager',
-                                        newSalary: 50000,
-                                      ),
-                                    ],
-                                  ),
-                                  PromotionHistory.Employee(
-                                    firstName: 'Jane',
-                                    lastName: 'Smith',
-                                    designation: 'Chef',
-                                    salary: 40000,
-                                    promotionHistory: [
-                                      PromotionHistory.Promotion(
-                                        date: DateTime.now()
-                                            .subtract(Duration(days: 30)),
-                                        oldDesignation: 'Staff',
-                                        newDesignation: 'Chef',
-                                        newSalary: 40000,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                              PromotionHistory.EmployeeManagementHistory(),
 
                               // MarkAttendance(),
                             ),
@@ -299,4 +246,4 @@ class ManagerHomePage extends StatelessWidget {
 
 
 
-//  promotion history 
+//  promotion history
