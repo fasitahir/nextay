@@ -104,124 +104,210 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
         TextEditingController(text: employees[index]['username'] ?? '');
     TextEditingController passwordController = TextEditingController();
 
-    // Initial values for role and shift
     String? selectedRole = employees[index]['role'];
     String? selectedShift = employees[index]['shift'];
+
+    String? nameError;
+    String? emailError;
+    String? passwordError;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Update Employee"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: "Name"),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Update Employee"),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: "Name",
+                        errorText: nameError,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          if (value.isEmpty ||
+                              RegExp(r'[^a-zA-Z\s]')
+                                  .hasMatch(value.split(' ')[0]) ||
+                              RegExp(r'[^a-zA-Z\s]')
+                                  .hasMatch(value.split(' ')[1])) {
+                            nameError = "Enter a valid name (letters only)";
+                          } else {
+                            nameError = null;
+                          }
+                        });
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedShift,
+                      items: <String>['Morning', 'Afternoon', 'Night']
+                          .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(labelText: "Shift"),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedShift = newValue;
+                        });
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      items: <String>[
+                        'Manager',
+                        'Staff',
+                        'Finance Manager',
+                        'Chef',
+                        'Janitor'
+                      ].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      decoration: const InputDecoration(labelText: "Role"),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedRole = newValue;
+                        });
+                      },
+                    ),
+                    TextField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: "Email",
+                        errorText: emailError,
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          if (value.isEmpty ||
+                              !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                  .hasMatch(value)) {
+                            emailError = "Enter a valid email (abc@xyz.com)";
+                          } else {
+                            emailError = null;
+                          }
+                        });
+                      },
+                    ),
+                    TextField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(labelText: "Username"),
+                    ),
+                    TextField(
+                      controller: passwordController,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        errorText: passwordError,
+                      ),
+                      obscureText: true,
+                      onChanged: (value) {
+                        setState(() {
+                          if (value.length < 6) {
+                            passwordError =
+                                'Password must be at least 6 characters';
+                          }
+                          if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) {
+                            passwordError = 'Add at least one uppercase letter';
+                          }
+                          if (!RegExp(r'(?=.*[a-z])').hasMatch(value)) {
+                            passwordError = 'Add least one lowercase letter';
+                          }
+                          if (!RegExp(r'(?=.*[0-9])').hasMatch(value)) {
+                            passwordError = 'Add at least one number';
+                          }
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                DropdownButtonFormField<String>(
-                  value: selectedShift,
-                  items: <String>['Morning', 'Afternoon', 'Night']
-                      .map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(labelText: "Shift"),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedShift = newValue;
-                    });
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    if (nameError == null &&
+                        emailError == null &&
+                        passwordError == null) {
+                      SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      int? employeeId = prefs.getInt('employeeId');
+
+                      if (employeeId != null) {
+                        final response = await http.put(
+                          Uri.parse(
+                              'http://$Ip:$Port/employee/${employees[index]['id']}'),
+                          headers: {"Content-Type": "application/json"},
+                          body: jsonEncode({
+                            'first_name': nameController.text.split(' ')[0],
+                            'last_name': nameController.text
+                                .split(' ')
+                                .sublist(1)
+                                .join(' '),
+                            'email': emailController.text,
+                            'shift': selectedShift,
+                            'role': selectedRole,
+                            'username': usernameController.text,
+                            'password': passwordController.text,
+                            'updatedBy': employeeId,
+                          }),
+                        );
+
+                        if (response.statusCode == 200) {
+                          // Update the local list after a successful response
+                          setState(() {
+                            employees[index] = {
+                              'id': employees[index]['id'],
+                              'name': nameController.text,
+                              'shift': selectedShift,
+                              'role': selectedRole,
+                              'email': emailController.text,
+                              'username': usernameController.text,
+                            };
+                          });
+                          // Close the dialog
+                          Navigator.of(context).pop();
+
+                          // Refresh the UI outside the dialog
+                          this.setState(() {});
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Employee updated successfully!',
+                                style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight
+                                        .bold), // Apply TextStyle here
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Failed to update employee: ${response.body}')),
+                          );
+                        }
+                      }
+                    }
                   },
+                  child: const Text("Update"),
                 ),
-                DropdownButtonFormField<String>(
-                  value: selectedRole,
-                  items: <String>['Manager', 'Staff', 'Finance Manager', 'Chef']
-                      .map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  decoration: const InputDecoration(labelText: "Role"),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedRole = newValue;
-                    });
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
                   },
-                ),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: "Email"),
-                ),
-                TextField(
-                  controller: usernameController,
-                  decoration: const InputDecoration(labelText: "Username"),
-                ),
-                TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(labelText: "Password"),
-                  obscureText: true,
+                  child: const Text("Cancel"),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                int? employeeId = prefs.getInt('employeeId');
-
-                if (employeeId != null) {
-                  final response = await http.put(
-                    Uri.parse(
-                        'http://$Ip:$Port/employee/${employees[index]['id']}'),
-                    headers: {"Content-Type": "application/json"},
-                    body: jsonEncode({
-                      'first_name': nameController.text.split(' ')[0],
-                      'last_name':
-                          nameController.text.split(' ').sublist(1).join(' '),
-                      'email': emailController.text,
-                      'shift': selectedShift,
-                      'role': selectedRole,
-                      'username': usernameController.text,
-                      'password': passwordController.text,
-                      'updatedBy': employeeId,
-                    }),
-                  );
-
-                  if (response.statusCode == 200) {
-                    setState(() {
-                      employees[index] = {
-                        'id': employees[index]['id'],
-                        'name': nameController.text,
-                        'shift': selectedShift,
-                        'role': selectedRole,
-                        'email': emailController.text,
-                        'username': usernameController.text,
-                      };
-                    });
-                    Navigator.of(context).pop();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Failed to update employee: ${response.body}')),
-                    );
-                  }
-                }
-              },
-              child: const Text("Update"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Cancel"),
-            ),
-          ],
+            );
+          },
         );
       },
     );

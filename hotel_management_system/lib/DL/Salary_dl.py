@@ -20,20 +20,35 @@ cursor = connection.cursor()
 def get_employees():
     try:
         selected_date = request.args.get('date')
-        print("Value for date is: " , selected_date)
+        print("Value for date is: ", selected_date)
+        if selected_date:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d')
+            year = selected_date.year
+            month = selected_date.month
+            print("Year:", year, "Month:", month)
+        else:
+            return jsonify({'error': 'Unable to get Date'}), 400
         cursor.execute("""
-        SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value
-        FROM Employee e
-        INNER JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
-        join Lookup l on d.Position=l.Id
-        WHERE isActive != 24
-        
+            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, S.PayDate
+            FROM Employee e
+            JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
+            JOIN Lookup l ON d.Position = l.Id
+            LEFT JOIN Salary S ON S.EmployeeID = e.Id AND MONTH(S.PayDate) = ? AND YEAR(S.PayDate) = ?
+            WHERE e.isActive != 24;
 
-        """)
+        """, (month, year))
         
         employees = cursor.fetchall()
         employee_list = []
-        
+        for emp in employees:
+           if emp[7] is None:
+                print("Employee not paid")
+                cursor.execute('''
+                    UPDATE Employee 
+                    SET IsPaid = 24
+                    WHERE Id = ?
+                ''', (emp[0]))
+       
         for emp in employees:
             employee_list.append({
                 'id': emp[0],
@@ -41,10 +56,12 @@ def get_employees():
                 'last_name': emp[2],
                 'salary': float(emp[3]),
                 'contact': emp[4],
-                'is_paid': emp[5],
+                'is_paid': emp[5] if emp[7] is not None else 24,
                 'Position': emp[6],
+                'pay_date': emp[7],
 
             })
+        print(employee_list)
         
         return jsonify(employee_list), 200
     
