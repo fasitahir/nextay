@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String? ip = dotenv.env['IP'];
+final String? port = dotenv.env['PORT'];
 
 class ViewAttendanceForEmployee extends StatefulWidget {
-  final Employee employee;
-
-  const ViewAttendanceForEmployee({super.key, required this.employee});
+  const ViewAttendanceForEmployee({super.key});
 
   @override
   _ViewAttendanceForEmployeeState createState() =>
@@ -12,14 +16,41 @@ class ViewAttendanceForEmployee extends StatefulWidget {
 }
 
 class _ViewAttendanceForEmployeeState extends State<ViewAttendanceForEmployee> {
-  // Simulated attendance data for the employee
-  final List<Map<String, dynamic>> attendanceRecords = List.generate(
-    10,
-    (index) => {
-      'date': DateTime.now().subtract(Duration(days: index)),
-      'status': AttendanceStatus.values[index % 3],
-    },
-  );
+  List<Map<String, dynamic>> attendanceRecords = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAttendanceData();
+  }
+
+  Future<void> fetchAttendanceData() async {
+    try {
+      // Retrieve the employeeId from SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? employeeId = prefs.getInt('employeeId');
+
+      // Call the backend API with the employeeId
+      final response = await http.get(
+        Uri.parse(
+            'http://$ip:$port/employee/attendance?employeeId=$employeeId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // If the request is successful, update the UI with the attendance data
+        List<dynamic> data = json.decode(response.body);
+        setState(() {
+          attendanceRecords = List<Map<String, dynamic>>.from(data);
+        });
+      } else {
+        // Handle the case where the request fails
+        print('Failed to load attendance data');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +95,7 @@ class _ViewAttendanceForEmployeeState extends State<ViewAttendanceForEmployee> {
             // White box with Card layout
             Expanded(
               child: Container(
-                width: screenWidth * 0.9, // 90% of screen width
+                width: screenWidth * 0.9,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -81,21 +112,12 @@ class _ViewAttendanceForEmployeeState extends State<ViewAttendanceForEmployee> {
                     itemCount: attendanceRecords.length,
                     itemBuilder: (context, index) {
                       final record = attendanceRecords[index];
-                      final date =
-                          DateFormat('yyyy-MM-dd').format(record['date']);
-                      final status =
-                          record['status'].toString().split('.').last;
-
-                      // Status based card color
-                      Color cardColor = Colors.white;
-                      if (record['status'] == AttendanceStatus.absent) {
-                        cardColor = Colors.red[100]!;
-                      } else if (record['status'] == AttendanceStatus.late) {
-                        cardColor = Colors.yellow[100]!;
-                      }
+                      final date = record['date'];
+                      final status = record['attendance_status'];
+                      final shift = record['shift'];
+                      final position = record['role'];
 
                       return Card(
-                        color: cardColor,
                         margin: const EdgeInsets.symmetric(vertical: 10),
                         elevation: 5,
                         shape: RoundedRectangleBorder(
@@ -107,7 +129,14 @@ class _ViewAttendanceForEmployeeState extends State<ViewAttendanceForEmployee> {
                             color: Colors.blueGrey[700],
                           ),
                           title: Text("Date: $date"),
-                          subtitle: Text("Status: $status"),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Shift: $shift"),
+                              Text("Role: $position"),
+                              Text("Status: $status"),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -120,34 +149,4 @@ class _ViewAttendanceForEmployeeState extends State<ViewAttendanceForEmployee> {
       ),
     );
   }
-}
-
-class Employee {
-  final int id;
-  final String firstName;
-  final String lastName;
-  AttendanceStatus attendanceStatus;
-
-  Employee({
-    required this.id,
-    required this.firstName,
-    required this.lastName,
-    required this.attendanceStatus,
-  });
-}
-
-enum AttendanceStatus { present, absent, late }
-
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: ViewAttendanceForEmployee(
-      employee: Employee(
-        id: 1,
-        firstName: 'John',
-        lastName: 'Doe',
-        attendanceStatus: AttendanceStatus.present,
-      ),
-    ),
-  ));
 }

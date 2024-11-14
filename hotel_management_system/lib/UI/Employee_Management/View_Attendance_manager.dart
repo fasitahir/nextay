@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String? ip = dotenv.env['IP'];
+final String? port = dotenv.env['PORT'];
 
 class ViewAttendanceForManager extends StatefulWidget {
   const ViewAttendanceForManager({super.key});
@@ -11,15 +17,7 @@ class ViewAttendanceForManager extends StatefulWidget {
 
 class _ViewAttendanceForManagerState extends State<ViewAttendanceForManager> {
   DateTime selectedDate = DateTime.now();
-  List<Employee> employees = List.generate(
-    10,
-    (index) => Employee(
-      id: index,
-      firstName: 'Employee',
-      lastName: '${index + 1}',
-      attendanceStatus: AttendanceStatus.values[index % 3],
-    ),
-  );
+  List<Employee> employees = [];
 
   // Function to select a date
   Future<void> _selectDate(BuildContext context) async {
@@ -32,7 +30,24 @@ class _ViewAttendanceForManagerState extends State<ViewAttendanceForManager> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
+        _fetchAttendanceData(); // Fetch new data based on the selected date
       });
+    }
+  }
+
+  Future<void> _fetchAttendanceData() async {
+    final String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+    final response = await http.get(
+      Uri.parse('http://$ip:$port/attendance?date=$formattedDate'),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      setState(() {
+        employees = data.map((json) => Employee.fromJson(json)).toList();
+      });
+    } else {
+      throw Exception('Failed to load attendance data');
     }
   }
 
@@ -80,7 +95,7 @@ class _ViewAttendanceForManagerState extends State<ViewAttendanceForManager> {
             // White box with Card layout
             Expanded(
               child: Container(
-                width: screenWidth * 0.9, // 90% of screen width
+                width: screenWidth * 0.9,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -179,7 +194,18 @@ class Employee {
     required this.lastName,
     required this.attendanceStatus,
   });
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      id: json['id'],
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      attendanceStatus: AttendanceStatus.values.firstWhere(
+        (status) => status.toString().split('.').last == json['status'],
+        orElse: () => AttendanceStatus.present,
+      ),
+    );
+  }
 }
 
 enum AttendanceStatus { present, absent, late }
-

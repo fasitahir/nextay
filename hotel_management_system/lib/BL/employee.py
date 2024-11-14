@@ -112,3 +112,13 @@ def getPositionCode(position):
         return 18
     else:
         return 0
+    
+def getAttendanceCode(attendance):
+    if attendance.lower() == 'present':
+        return 25
+    elif attendance.lower() == 'absent':
+        return 26
+    elif attendance.lower() == 'late':
+        return 27
+    else:
+        return 0

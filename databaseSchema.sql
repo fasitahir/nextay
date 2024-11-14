@@ -29,7 +29,10 @@ INSERT INTO [dbo].[Lookup] ([Id], [Category], [Value]) VALUES
     (21, N'Employees Shift', N'Afternoon'),
     (22, N'Employees Shift', N'Night'),
     (23, N'Status', N'True'),
-    (24, N'Status', N'False');
+    (24, N'Status', N'False'),
+    (25, N'Attendance Status', N'Present'),
+    (26, N'Attendance Status', N'Absent'),
+    (27, N'Attendance Status', N'Late');
 
 -- Disable further changes to Lookup table data
 ALTER TABLE [dbo].[Lookup] 

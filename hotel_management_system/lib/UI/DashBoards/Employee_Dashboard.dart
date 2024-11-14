@@ -7,7 +7,8 @@ import 'package:hotel_management_system/UI/Employee_Management/View_salary_Emplo
 import 'package:hotel_management_system/UI/FeedBack/AddFeedback.dart';
 import 'package:hotel_management_system/UI/Room_Management/Rooms_CHeckedIn/Out.dart';
 import 'package:hotel_management_system/UI/main.dart';
-// import 'package:hotel_management_system/DL/login.py'; 
+
+// import 'package:hotel_management_system/DL/login.py';
 class EmployeeHomePage extends StatelessWidget {
   final String managerName;
 
@@ -111,24 +112,15 @@ class EmployeeHomePage extends StatelessWidget {
                               context,
                               'View Attendance',
                               Icons.assignment,
-                              attendance.ViewAttendanceForEmployee(
-                                employee: attendance.Employee(
-                                  id: 1,
-                                  firstName: 'John',
-                                  lastName: 'Doe',
-                                  attendanceStatus:
-                                      attendance.AttendanceStatus.present,
-                                ),
-                              ),
+                              attendance.ViewAttendanceForEmployee(),
                             ),
-                            
-                           _buildFunctionalityBox(
-                            context,
-                            'View Salary',
-                            Icons.money,
-                             salary.ViewSalaryForEmployee(), // No employeeId passed here
-                          ),
-
+                            _buildFunctionalityBox(
+                              context,
+                              'View Salary',
+                              Icons.money,
+                              salary
+                                  .ViewSalaryForEmployee(), // No employeeId passed here
+                            ),
                             _buildFunctionalityBox(
                               context,
                               'Take Feedback',

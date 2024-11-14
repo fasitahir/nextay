@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-// ignore: depend_on_referenced_packages
-import 'package:intl/intl.dart'; // For formatting the date
+import 'package:intl/intl.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String? ip = dotenv.env['IP'];
+final String? port = dotenv.env['PORT'];
 
 class MarkAttendance extends StatefulWidget {
   const MarkAttendance({super.key});
@@ -13,17 +18,7 @@ class MarkAttendance extends StatefulWidget {
 class _MarkAttendanceState extends State<MarkAttendance>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
-  // Dummy data for employee list
-  final List<Employee> employees = List.generate(
-    10,
-    (index) => Employee(
-      id: index,
-      firstName: 'Employee',
-      lastName: '${index + 1}',
-      attendanceStatus: AttendanceStatus.present,
-    ),
-  );
+  List<Employee> employees = [];
 
   // Get today's date
   final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -31,7 +26,6 @@ class _MarkAttendanceState extends State<MarkAttendance>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -40,6 +34,55 @@ class _MarkAttendanceState extends State<MarkAttendance>
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _controller.forward();
     });
+
+    // Fetch employees from server
+    _fetchEmployees();
+  }
+
+  Future<void> _fetchEmployees() async {
+    final response =
+        await http.get(Uri.parse('http://$ip:$port/employees?date=$todayDate'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+      setState(() {
+        employees = data.map((json) => Employee.fromJson(json)).toList();
+      });
+    } else {
+      throw Exception('Failed to load employees');
+    }
+  }
+
+  Future<void> _submitAttendance() async {
+    List<Map<String, dynamic>> attendanceData = employees.map((employee) {
+      return {
+        'employee_id': employee.id,
+        'status': employee.attendanceStatus.name,
+        'date': todayDate,
+      };
+    }).toList();
+
+    final response = await http.post(
+      Uri.parse('http://$ip:$port/mark_attendance'),
+      headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      body: jsonEncode(attendanceData),
+    );
+
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Attendance successfully marked!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to mark attendance: ${response.body}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -52,8 +95,6 @@ class _MarkAttendanceState extends State<MarkAttendance>
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
-    // ignore: unused_local_variable
-    bool isWeb = screenWidth > 800;
 
     return Scaffold(
       body: Container(
@@ -92,7 +133,6 @@ class _MarkAttendanceState extends State<MarkAttendance>
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.02),
-                        // Display the date
                         Text(
                           "Date: $todayDate",
                           style: const TextStyle(
@@ -147,7 +187,6 @@ class _MarkAttendanceState extends State<MarkAttendance>
                                 ),
                               );
 
-                              // Change color based on attendance status
                               Color cardColor = Colors.white;
                               if (employees[index].attendanceStatus ==
                                   AttendanceStatus.absent) {
@@ -168,8 +207,19 @@ class _MarkAttendanceState extends State<MarkAttendance>
                                         color: Colors.blueGrey[900]),
                                     title: Text(
                                         "${employees[index].firstName} ${employees[index].lastName}"),
-                                    subtitle: Text(
-                                        "Status: ${employees[index].attendanceStatus.name}"),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text("Role: ${employees[index].role}"),
+                                        Text(
+                                            "Email: ${employees[index].email}"),
+                                        Text(
+                                            "Shift: ${employees[index].shift}"),
+                                        Text(
+                                            "Status: ${employees[index].attendanceStatus.name}"),
+                                      ],
+                                    ),
                                     trailing: DropdownButton<AttendanceStatus>(
                                       value: employees[index].attendanceStatus,
                                       onChanged: (AttendanceStatus? newValue) {
@@ -183,10 +233,7 @@ class _MarkAttendanceState extends State<MarkAttendance>
                                         return DropdownMenuItem<
                                             AttendanceStatus>(
                                           value: status,
-                                          child: Text(status
-                                              .toString()
-                                              .split('.')
-                                              .last),
+                                          child: Text(status.name),
                                         );
                                       }).toList(),
                                     ),
@@ -199,15 +246,7 @@ class _MarkAttendanceState extends State<MarkAttendance>
                       ),
                       SizedBox(height: screenHeight * 0.02),
                       MaterialButton(
-                        onPressed: () {
-                          // Show success message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Attendance successfully marked!"),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
+                        onPressed: _submitAttendance,
                         height: 50,
                         color: Colors.blueGrey[600],
                         shape: RoundedRectangleBorder(
@@ -240,20 +279,53 @@ class Employee {
   final String firstName;
   final String lastName;
   AttendanceStatus attendanceStatus;
+  final String email;
+  final String shift;
+  final String role;
 
   Employee({
     required this.id,
     required this.firstName,
     required this.lastName,
     required this.attendanceStatus,
+    required this.email,
+    required this.shift,
+    required this.role,
   });
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    if (json['status'] == 'Absent') {
+      return Employee(
+        id: json['id'],
+        firstName: json['first_name'],
+        lastName: json['last_name'],
+        email: json['email'],
+        shift: json['shift'],
+        role: json['role'],
+        attendanceStatus: AttendanceStatus.absent,
+      );
+    } else if (json['status'] == 'Late') {
+      return Employee(
+        id: json['id'],
+        firstName: json['first_name'],
+        lastName: json['last_name'],
+        email: json['email'],
+        shift: json['shift'],
+        role: json['role'],
+        attendanceStatus: AttendanceStatus.late,
+      );
+    } else {
+      return Employee(
+        id: json['id'],
+        firstName: json['first_name'],
+        lastName: json['last_name'],
+        email: json['email'],
+        shift: json['shift'],
+        role: json['role'],
+        attendanceStatus: AttendanceStatus.present,
+      );
+    }
+  }
 }
 
 enum AttendanceStatus { present, absent, late }
-
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: MarkAttendance(),
-  ));
-}

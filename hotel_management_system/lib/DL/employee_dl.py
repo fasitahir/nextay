@@ -85,7 +85,12 @@ def add_employee():
 @app.route('/employees', methods=['GET'])
 def get_employees():
     try:
-        cursor.execute("SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role FROM Employee E JOIN Lookup l ON l.Id = E.Shift JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id JOIN Lookup l2 ON ED.Position = l2.Id WHERE isActive != 24")
+        cursor.execute('''SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role 
+                       FROM Employee E 
+                       JOIN Lookup l ON l.Id = E.Shift 
+                       JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id 
+                       JOIN Lookup l2 ON ED.Position = l2.Id 
+                       WHERE isActive != 24''')
         employees = cursor.fetchall()
 
         employee_list = []
@@ -180,4 +185,191 @@ def delete_employee(employee_id):
         return jsonify({'message': 'Employee deleted (soft delete) successfully!'}), 200
     except Exception as e:
         print(f"Error deleting employee: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/mark_attendance', methods=['POST'])
+def mark_attendance():
+    try:
+        # Get data from the request
+        data = request.json
+        print(f"Received attendance data: {data}")  # Log incoming data
+
+        # Loop through each attendance record in the list
+        for record in data:
+            # Extract data from the record
+            employee_id = record['employee_id']
+            status = employeeFunctions.getAttendanceCode(record['status'])  # Expected values: 'present', 'absent', 'late'
+            date = record['date']      # Date format expected as 'yyyy-mm-dd'
+            
+            try:
+                # Parse the date string into a date object
+                date = datetime.strptime(date, '%Y-%m-%d')
+                attendance_date = date.date()
+            except ValueError:
+                return jsonify({'error': 'Invalid date format. Use yyyy-mm-dd'}), 400
+
+            # Check if an attendance record already exists for the employee on the specified date
+            cursor.execute(
+                """SELECT COUNT(*) FROM Attendance 
+                   WHERE EmployeeID = ? AND Date = ?""",
+                (employee_id, attendance_date)
+            )
+            record_exists = cursor.fetchone()[0] > 0
+
+            # Insert or update attendance
+            if record_exists:
+                # Update existing record
+                cursor.execute(
+                    """UPDATE Attendance 
+                        SET AttendanceStatus = ?
+                        WHERE EmployeeId = ? AND Date = ?""",
+                    (status, employee_id, attendance_date)
+                )
+            else:
+                # Insert new attendance record
+                cursor.execute(
+                    """INSERT INTO Attendance (EmployeeId, Date, AttendanceStatus, CheckInTime, CheckOutTime) 
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (employee_id, attendance_date, status, datetime.now(), None)
+                )
+            # Commit transaction for each record
+            connection.commit()
+
+    except Exception as e:
+        print(f"Error in marking attendance: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/employees', methods=['GET'])
+def get_employees_attendance():
+    try:
+        selected_date = request.args.get('date')
+        if selected_date:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d')
+        else:
+            return jsonify({'error': 'Unable to get Date'}), 400
+        cursor.execute('''
+            SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role, l3.Value as AttendanceStatus 
+            FROM Employee E 
+            JOIN Lookup l ON l.Id = E.Shift 
+            JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id 
+            JOIN Lookup l2 ON ED.Position = l2.Id 
+            JOIN Attendance att ON att.EmployeeID = E.Id
+            JOIN Lookup l3 ON att.AttendanceStatus = l3.Id
+            WHERE isActive != 24 and att.Date = ?
+        ''', (selected_date,))
+        employees = cursor.fetchall()
+
+        if employees is None:
+            cursor.execute('''SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role 
+                       FROM Employee E 
+                       JOIN Lookup l ON l.Id = E.Shift 
+                       JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id 
+                       JOIN Lookup l2 ON ED.Position = l2.Id 
+                       WHERE isActive != 24''')
+            employees = cursor.fetchall()
+
+
+        employee_list = []
+        for emp in employees:
+            employee_list.append({
+                'id': emp[0],
+                'first_name': emp[1],
+                'last_name': emp[2],
+                'email': emp[3],
+                'shift': emp[4],
+                'role': emp[5],
+                'attendance_status': emp[6] if len(emp) > 6 else 'Absent'
+            })
+
+
+        return jsonify(employee_list), 200
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/attendance', methods=['GET'])
+def get_attendance_forManager():
+    try:
+        selected_date = request.args.get('date')
+        print(f"Selected Date: {selected_date}")
+        if selected_date:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d')
+        else:
+            return jsonify({'error': 'Unable to get Date'}), 400
+        cursor.execute('''
+            SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role, l3.Value as AttendanceStatus 
+            FROM Employee E 
+            JOIN Lookup l ON l.Id = E.Shift 
+            JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id 
+            JOIN Lookup l2 ON ED.Position = l2.Id 
+            JOIN Attendance att ON att.EmployeeID = E.Id
+            JOIN Lookup l3 ON att.AttendanceStatus = l3.Id
+            WHERE isActive != 24 and att.Date = ?
+        ''', (selected_date,))
+        employees = cursor.fetchall()
+
+        if employees is None:
+            return jsonify({'error': 'No attendance records found'}), 404
+
+        employee_list = []
+        for emp in employees:
+            employee_list.append({
+                'id': emp[0],
+                'first_name': emp[1],
+                'last_name': emp[2],
+                'email': emp[3],
+                'shift': emp[4],
+                'role': emp[5],
+                'attendance_status': emp[6] if len(emp) > 6 else 'Absent'
+            })
+
+
+        return jsonify(employee_list), 200
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/employee/attendance', methods=['GET'])
+def get_attendance_forEmployee():
+    print("Getting attendance for employee")
+    try:
+        id = request.args.get('employeeId')
+        print(f"Employee ID: {id}")
+        if id is None:
+            return jsonify({'error': 'Unable to get Id'}), 400
+        cursor.execute('''
+            SELECT E.Id, FirstName, LastName, Email, l.Value as Shift, l2.Value as Role, l3.Value as AttendanceStatus, att.Date
+            FROM Employee E 
+            JOIN Lookup l ON l.Id = E.Shift 
+            JOIN EmployeeDesignation ED ON ED.EmployeeId = E.Id 
+            JOIN Lookup l2 ON ED.Position = l2.Id 
+            JOIN Attendance att ON att.EmployeeID = E.Id
+            JOIN Lookup l3 ON att.AttendanceStatus = l3.Id
+            WHERE isActive != 24 and E.Id = ? 
+        ''', (id))
+        employees = cursor.fetchall()
+
+        if employees is None:
+            return jsonify({'error': 'No attendance records found'}), 404
+
+        employee_list = []
+        for emp in employees:
+            employee_list.append({
+                'id': emp[0],
+                'first_name': emp[1],
+                'last_name': emp[2],
+                'email': emp[3],
+                'shift': emp[4],
+                'role': emp[5],
+                'attendance_status': emp[6] if len(emp) > 6 else 'Absent',
+                'date': emp[7].strftime('%Y-%m-%d')
+            })
+
+
+        return jsonify(employee_list), 200
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
         return jsonify({'error': str(e)}), 500

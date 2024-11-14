@@ -6,6 +6,8 @@ import 'package:hotel_management_system/UI/Employee_Management/PromotionHistory.
     as PromotionHistory;
 import 'package:hotel_management_system/UI/Employee_Management/View_salary_manager.dart';
 import 'package:hotel_management_system/UI/Employee_Management/add_attendance.dart';
+import 'package:hotel_management_system/UI/Employee_Management/View_Attendance_manager.dart';
+
 import 'package:hotel_management_system/UI/Employee_Management/add_employee.dart';
 import 'package:hotel_management_system/UI/Employee_Management/emolyee_shift.dart';
 import 'package:hotel_management_system/UI/Employee_Management/update_employee.dart';
@@ -140,6 +142,13 @@ class ManagerHomePage extends StatelessWidget {
                                 const EmployeeShift()),
                             _buildFunctionalityBox(context, 'Mark Attendance',
                                 Icons.check_box, const MarkAttendance()
+                                // MarkAttendance(),
+                                ),
+                            _buildFunctionalityBox(
+                                context,
+                                'View Attendance',
+                                Icons.check_box,
+                                const ViewAttendanceForManager()
                                 // MarkAttendance(),
                                 ),
                             _buildFunctionalityBox(
