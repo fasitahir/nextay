@@ -1,5 +1,12 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:animate_do/animate_do.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String? ip = dotenv.env['IP'];
+final String? port = dotenv.env['PORT'];
 
 class EmployeeShift extends StatefulWidget {
   const EmployeeShift({super.key});
@@ -10,55 +17,49 @@ class EmployeeShift extends StatefulWidget {
 
 class EmployeeShiftState extends State<EmployeeShift> {
   String selectedShift = 'Morning'; // Default shift selection
+  List<Map<String, dynamic>> employees = [];
 
-  // Sample employee data
-  final List<Map<String, String>> employees = [
-    {
-      'name': 'John Doe',
-      'shift': 'Morning',
-      'role': 'Manager',
-      'email': 'john.doe@example.com',
-    },
-    {
-      'name': 'Jane Smith',
-      'shift': 'Afternoon',
-      'role': 'Chef',
-      'email': 'jane.smith@example.com',
-    },
-    {
-      'name': 'Mark Lee',
-      'shift': 'Night',
-      'role': 'Receptionist',
-      'email': 'mark.lee@example.com',
-    },
-    {
-      'name': 'Alice Brown',
-      'shift': 'Morning',
-      'role': 'Housekeeping',
-      'email': 'alice.brown@example.com',
-    },
-    {
-      'name': 'David Green',
-      'shift': 'Afternoon',
-      'role': 'Security',
-      'email': 'david.green@example.com',
-    },
-    {
-      'name': 'Fasi Tahir',
-      'shift': 'Morning',
-      'role': 'Manager',
-      'email': 'fasitahir2019@gmail.com',
-    },
-    {
-      'name': 'Laiba Khan',
-      'shift': 'Morning',
-      'role': 'Manager',
-      'email': 'lk420@gmail.com',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchEmployees();
+  }
+
+  // Method to fetch employees from the backend based on selected shift
+  Future<void> fetchEmployees({String? shift}) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'http://$ip:$port/employee/shift?shift=${shift ?? ""}'), // Send shift or all employees
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        setState(() {
+          employees = List<Map<String, dynamic>>.from(data.map((e) {
+            return {
+              'name': e['first_name'] + ' ' + e['last_name'],
+              'shift': e['shift'],
+              'role': e['role'],
+              'email': e['email'],
+            };
+          }));
+        });
+      } else {
+        if (kDebugMode) {
+          print('Failed to load employees');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error: $e');
+      }
+    }
+  }
 
   // Method to filter employees based on selected shift
-  List<Map<String, String>> getFilteredEmployees() {
+  List<Map<String, dynamic>> getFilteredEmployees() {
     return employees.where((employee) {
       return employee['shift'] == selectedShift;
     }).toList();
@@ -68,7 +69,7 @@ class EmployeeShiftState extends State<EmployeeShift> {
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
-    bool isWeb = screenWidth > 800; // Set threshold for large screens
+    bool isWeb = screenWidth > 800;
 
     return Scaffold(
       body: Container(
@@ -138,26 +139,19 @@ class EmployeeShiftState extends State<EmployeeShift> {
                           child: SingleChildScrollView(
                             child: isWeb
                                 ? Wrap(
-                                    spacing: screenWidth *
-                                        0.02, // Spacing between cards
-                                    runSpacing:
-                                        screenHeight * 0.02, // Vertical spacing
+                                    spacing: screenWidth * 0.02,
+                                    runSpacing: screenHeight * 0.02,
                                     children:
                                         getFilteredEmployees().map((employee) {
-                                      return buildEmployeeCard(
-                                          employee,
-                                          screenHeight,
-                                          screenWidth *
-                                              0.3); // 30% width for web
+                                      return buildEmployeeCard(employee,
+                                          screenHeight, screenWidth * 0.3);
                                     }).toList(),
                                   )
                                 : Column(
                                     children:
                                         getFilteredEmployees().map((employee) {
                                       return buildEmployeeCard(
-                                          employee,
-                                          screenHeight,
-                                          screenWidth); // Full width for mobile
+                                          employee, screenHeight, screenWidth);
                                     }).toList(),
                                   ),
                           ),
@@ -202,6 +196,8 @@ class EmployeeShiftState extends State<EmployeeShift> {
         onChanged: (newValue) {
           setState(() {
             selectedShift = newValue!;
+            fetchEmployees(
+                shift: selectedShift); // Fetch employees based on shift
           });
         },
       ),
@@ -210,7 +206,7 @@ class EmployeeShiftState extends State<EmployeeShift> {
 
   // Build Employee Card
   Widget buildEmployeeCard(
-      Map<String, String> employee, double screenHeight, double cardWidth) {
+      Map<String, dynamic> employee, double screenHeight, double cardWidth) {
     return Card(
       margin: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
       elevation: 5,
@@ -235,11 +231,4 @@ class EmployeeShiftState extends State<EmployeeShift> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: EmployeeShift(),
-  ));
 }

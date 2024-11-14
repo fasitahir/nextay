@@ -373,3 +373,47 @@ def get_attendance_forEmployee():
     except Exception as e:
         print(f"Error fetching employees: {e}")
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/employee/shift', methods=['GET'])
+def get_employee_shift():
+    try:
+        shift = request.args.get('shift')
+        print(f"Shift: {shift}")
+
+        if shift is "":
+            cursor.execute('''   
+                select FirstName, LastName, Email, l1.Value as role, l2.Value as shift
+                from Employee E
+                JOIN EmployeeDesignation ED ON ED.EmployeeID = E.Id
+                JOIN Lookup l1 ON ED.Position = L1.Id
+                JOIN Lookup l2 ON E.Shift = l2.Id
+                WHERE IsActive != 24
+
+                            ''')
+            employees = cursor.fetchall()
+            print(f"Employees: {employees}")
+        else:
+            cursor.execute('''   
+                select FirstName, LastName, Email, l1.Value as role, l2.Value as shift
+                from Employee E
+                JOIN EmployeeDesignation ED ON ED.EmployeeID = E.Id
+                JOIN Lookup l1 ON ED.Position = L1.Id
+                JOIN Lookup l2 ON E.Shift = l2.Id
+                WHERE IsActive != 24 AND E.Shift = ?
+                        ''', (employeeFunctions.ShiftCode(shift),))
+            employees = cursor.fetchall()
+        
+        employee_list = []
+        for emp in employees:
+            employee_list.append({
+
+                'first_name': emp[0],
+                'last_name': emp[1],
+                'email': emp[2],
+                'role': emp[3],
+                'shift': emp[4],
+            })
+        return jsonify(employee_list), 200
+    except Exception as e:
+        print(f"Error fetching employees: {e}")
+        return jsonify({'error': str(e)}), 500
