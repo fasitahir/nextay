@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:http/http.dart' as http;
@@ -55,43 +56,77 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
 
   // Function to delete employee
   Future<void> deleteEmployee(int index) async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? employeeId = prefs.getInt('employeeId');
-
-      if (employeeId != null) {
-        // Call the backend API with the employeeId
-        final employeeId = employees[index]['id'];
-
-        final response = await http.delete(
-          Uri.parse('http://$Ip:$Port/employee/$employeeId'),
-          headers: {"Content-Type": "application/json"},
+    // Show a confirmation dialog before deletion
+    bool? confirmDelete = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Confirm Deletion"),
+          content: Text(
+            "Are you sure you want to delete '${employees[index]['name']}'?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false); // User canceled deletion
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // User confirmed deletion
+              },
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
         );
+      },
+    );
 
-        if (response.statusCode == 200) {
-          setState(() {
-            employees.removeAt(index); // Remove employee from the UI
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Employee deleted successfully!')),
+    // Proceed with deletion if user confirmed
+    if (confirmDelete == true) {
+      try {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        int? employeeId = prefs.getInt('employeeId');
+
+        if (employeeId != null) {
+          final employeeId = employees[index]['id'];
+
+          final response = await http.delete(
+            Uri.parse('http://$Ip:$Port/employee/$employeeId'),
+            headers: {"Content-Type": "application/json"},
           );
+
+          if (response.statusCode == 200) {
+            setState(() {
+              employees.removeAt(index); // Remove employee from the UI
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Employee deleted successfully!')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('Failed to delete employee: ${response.body}')),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('Failed to delete employee: ${response.body}')),
+                content: Text('Failed to delete employee: User ID not found')),
           );
         }
-      } else {
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error deleting employee: $e');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to delete employee: User ID not found')),
+          SnackBar(content: Text('Error deleting employee: $e')),
         );
       }
-    } catch (e) {
-      print('Error deleting employee: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting employee: $e')),
-      );
     }
   }
 

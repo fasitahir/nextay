@@ -32,7 +32,8 @@ def login():
         FROM [Users] u 
         JOIN EmployeeDesignation ed ON u.EmployeeID = ed.EmployeeId
         JOIN Lookup p ON ed.Position = p.Id 
-        WHERE u.Username = ?
+        JOIN Employee E ON E.Id = u.EmployeeID
+        WHERE u.Username = ? and isActive != 24
         """
         cursor.execute(query, (username,))
         result = cursor.fetchone()

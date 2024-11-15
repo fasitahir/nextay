@@ -519,14 +519,6 @@ class _PromoteEmployeeState extends State<PromoteEmployee> {
                               return;
                             }
 
-                            // Check if there's any actual change
-                            // if (selectedDesignation == widget.employee.designation && newSalary == widget.employee.salary) {
-                            //   setState(() {
-                            //     errorMessage = "At least one field must be changed.";
-                            //   });
-                            //   return;
-                            // }
-
                             // Update employee data and call the API if valid
                             setState(() {
                               widget.employee.salary = newSalary;
