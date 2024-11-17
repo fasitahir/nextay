@@ -40,14 +40,14 @@ def get_employees():
         
         employees = cursor.fetchall()
         employee_list = []
-        for emp in employees:
-           if emp[7] is None:
-                print("Employee not paid")
-                cursor.execute('''
-                    UPDATE Employee 
-                    SET IsPaid = 24
-                    WHERE Id = ?
-                ''', (emp[0]))
+        # for emp in employees:
+        #    if emp[7] is None:
+        #         print("Employee not paid")
+        #         cursor.execute('''
+        #             UPDATE Employee 
+        #             SET IsPaid = 24
+        #             WHERE Id = ?
+        #         ''', (emp[0]))
        
         for emp in employees:
             employee_list.append({
