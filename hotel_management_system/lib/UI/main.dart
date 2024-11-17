@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -109,6 +110,9 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    if (kDebugMode) {
+      print("Loging In");
+    }
     final response = await http.post(
       Uri.parse('http://$apiUrl:$apiPort/login'),
       headers: {'Content-Type': 'application/json'},

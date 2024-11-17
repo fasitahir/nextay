@@ -99,6 +99,37 @@ def pay_salary():
         VALUES (?, ?, ?, ?, ?, ?)
         """, (employee_id, pay_date, incentive, incentive_description, increment_date, paid_by))
 
+        #Insert Expense record
+        cursor.execute("""
+        SELECT COUNT(*)
+        FROM Expense E
+        WHERE Category = 'Salary' and E.Date = ?
+        """, (pay_date,))
+        print("Pay Date:", pay_date, type(pay_date))
+
+        count = cursor.fetchone()[0]
+        if count == 0:
+            note  = 'Salary paid to employee for employee id: ' + str(employee_id)
+            cursor.execute("""
+            INSERT INTO Expense (Date, Category, Amount, Notes)
+            VALUES ( ?,'Salary', ?, ?)
+            """, (pay_date, salary, note))
+
+        elif count == 1:
+            cursor.execute("""
+                SELECT Notes
+                FROM Expense
+                WHERE Category = 'Salary' and Date = ?
+                           """,(pay_date,))
+            notes = cursor.fetchone()[0]
+            note = notes + ', ' + str(employee_id)
+
+            cursor.execute("""
+            UPDATE Expense
+            SET Amount = Amount + ?, Notes = ?
+            WHERE Category = 'Salary' and Date = ?
+            """, (salary, note ,pay_date))
+
         # Commit the transaction
         connection.commit()
 

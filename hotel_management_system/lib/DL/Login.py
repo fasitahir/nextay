@@ -22,6 +22,7 @@ cursor = connection.cursor()
 @app.route('/login', methods=['POST'])
 def login():
     try:
+        print("Login route")
         data = request.json
         username = data['Username']
         provided_password = data['Password']
