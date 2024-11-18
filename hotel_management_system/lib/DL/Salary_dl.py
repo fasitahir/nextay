@@ -29,7 +29,7 @@ def get_employees():
         else:
             return jsonify({'error': 'Unable to get Date'}), 400
         cursor.execute("""
-            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, S.PayDate
+            SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, S.PayDate, Incentive, IncentiveDescription
             FROM Employee e
             JOIN EmployeeDesignation d ON e.Id = d.EmployeeId
             JOIN Lookup l ON d.Position = l.Id
@@ -48,7 +48,7 @@ def get_employees():
         #             SET IsPaid = 24
         #             WHERE Id = ?
         #         ''', (emp[0]))
-       
+        print(employees)
         for emp in employees:
             employee_list.append({
                 'id': emp[0],
@@ -59,6 +59,8 @@ def get_employees():
                 'is_paid': emp[5] if emp[7] is not None else 24,
                 'Position': emp[6],
                 'pay_date': emp[7],
+                'incentive': emp[8],
+                'incentiveDescription': emp[9]
 
             })
         print(employee_list)

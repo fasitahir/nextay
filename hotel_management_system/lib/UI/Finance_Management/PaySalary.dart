@@ -172,6 +172,12 @@ class _PaySalaryForManagerState extends State<PaySalaryForManager> {
                     final String description = descriptionController.text;
 
                     // Final validation before adding bonus
+                    setState(() {
+                      validateBonus(bonusController.text);
+                      validateDescription(descriptionController.text);
+                    });
+
+                    // Final validation before adding bonus
                     if (bonusErrorText == null &&
                         descriptionErrorText == null) {
                       employees[index].addBonus(bonus!, description);
@@ -295,10 +301,15 @@ class _PaySalaryForManagerState extends State<PaySalaryForManager> {
                                           Text('Salary: \$ $salary'),
                                           Text(
                                               'Designation: ${employee.position}'),
+                                          if (employee.incentive != null)
+                                            Text(
+                                                'Incentive: ${employee.incentive}',
+                                                style: TextStyle(
+                                                    color: Colors.green)),
                                           if (employee.incentiveDescription !=
                                               null)
                                             Text(
-                                                'Incentive: ${employee.incentiveDescription}',
+                                                'Incentive Note: ${employee.incentiveDescription}',
                                                 style: TextStyle(
                                                     color: Colors.green)),
                                         ],
@@ -420,8 +431,9 @@ class Employee {
   double salary;
   int? paid; // Keep it as an integer
   String? incentiveDescription; // Add this field for incentive description
-  double baseSalary; // New field for the base salary
-  int? paidBy; // New field for the person who paid
+  double baseSalary; // field for the base salary
+  int? paidBy;
+  double? incentive;
 
   Employee({
     required this.id,
@@ -434,20 +446,25 @@ class Employee {
     required this.baseSalary,
     this.incentiveDescription,
     required this.paidBy,
+    this.incentive,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
     return Employee(
-        id: json['id'],
-        firstName: json['first_name'],
-        lastName: json['last_name'],
-        contact: json['contact'],
-        position: json['Position'],
-        salary: json['salary'],
-        paid: json['is_paid'],
-        baseSalary: json['salary'],
-        paidBy: json['paidBy'] // Assuming base salary is in the API
-        );
+      id: json['id'],
+      firstName: json['first_name'],
+      lastName: json['last_name'],
+      contact: json['contact'],
+      position: json['Position'],
+      salary: json['salary'],
+      paid: json['is_paid'],
+      baseSalary: json['salary'],
+      paidBy: json['paidBy'], // Assuming base salary is in the API
+      incentiveDescription: json['incentiveDescription'],
+      incentive: json['incentive'] != null
+          ? double.parse(json['incentive'].toString())
+          : null,
+    );
   }
 
   // Function to add bonus to the employee's salary
