@@ -170,19 +170,14 @@ class _PaySalaryForManagerState extends State<PaySalaryForManager> {
                   onPressed: () {
                     final double? bonus = double.tryParse(bonusController.text);
                     final String description = descriptionController.text;
-
-                    // Final validation before adding bonus
                     setState(() {
-                      validateBonus(bonusController.text);
-                      validateDescription(descriptionController.text);
+                      // Final validation before adding bonus
+                      if (bonusErrorText == null &&
+                          descriptionErrorText == null) {
+                        employees[index].addBonus(bonus!, description);
+                        Navigator.of(context).pop(); // Close the dialog
+                      }
                     });
-
-                    // Final validation before adding bonus
-                    if (bonusErrorText == null &&
-                        descriptionErrorText == null) {
-                      employees[index].addBonus(bonus!, description);
-                      Navigator.of(context).pop(); // Close the dialog
-                    }
                   },
                   child: const Text('Add Bonus'),
                 ),
@@ -301,7 +296,7 @@ class _PaySalaryForManagerState extends State<PaySalaryForManager> {
                                           Text('Salary: \$ $salary'),
                                           Text(
                                               'Designation: ${employee.position}'),
-                                          if (employee.incentive != null)
+                                          // if (employee.incentive != null)
                                             Text(
                                                 'Incentive: ${employee.incentive}',
                                                 style: TextStyle(
