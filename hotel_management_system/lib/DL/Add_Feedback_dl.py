@@ -27,7 +27,7 @@ def submit_feedback():
         rating = data['Rating']
         feedback_type_name = data['Type']
         # Retrieve customer ID based on the provided name
-        cursor.execute("SELECT Id FROM CustomerTable WHERE FirstName = ?", (customer_name))
+        cursor.execute("SELECT CustomerID FROM Customer WHERE FirstName = ?", (customer_name))
         customer = cursor.fetchone()
         if customer:
             customer_id = customer[0]
@@ -43,8 +43,8 @@ def submit_feedback():
 
                 # Insert feedback into the database with DateSubmitted and Status
                 cursor.execute(
-                    "INSERT INTO Feedback (CustomerId, Feedback, Rating, Type, DateSubmitted, Status) VALUES (?, ?, ?, ?, ?, ?)",
-                    (feedback.CustomerId, feedback.Feedback, feedback.Rating, feedback.Type, feedback.DateSubmitted, feedback.Status)
+                    "INSERT INTO Feedback (CustomerId, Feedback, Rating, Type, DateSubmitted) VALUES (?, ?, ?, ?, ?)",
+                    (feedback.CustomerId, feedback.Feedback, feedback.Rating, feedback.Type, feedback.DateSubmitted)
                 )
                 connection.commit()
                 return jsonify({'message': 'Feedback submitted successfully!'}), 201

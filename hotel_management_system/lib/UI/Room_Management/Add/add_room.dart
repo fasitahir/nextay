@@ -3,107 +3,120 @@ import 'package:animate_do/animate_do.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final String? apiUrl = dotenv.env['IP'];
 final String? apiPort = dotenv.env['PORT'];
 
 class AddRoomScreen extends StatefulWidget {
-  const AddRoomScreen({super.key});
+  const AddRoomScreen({Key? key}) : super(key: key);
 
   @override
   _AddRoomScreenState createState() => _AddRoomScreenState();
 }
 
 class _AddRoomScreenState extends State<AddRoomScreen> {
-  final TextEditingController roomTypeController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController pricePerDayController = TextEditingController();
   final TextEditingController roomAreaController = TextEditingController();
   final TextEditingController floorNumberController = TextEditingController();
   final TextEditingController maxOccupancyController = TextEditingController();
   final TextEditingController bedTypeController = TextEditingController();
-
-  DateTime? selectedLastCleaned;
-  DateTime? selectedLastMaintenanceDate;
+  String? selectedRoomType;
   String? selectedRoomStatus;
-  String? selectedImageId;
+  List<String> selectedAmenities = [];
 
+  final List<String> roomTypes = [
+    'Deluxe',
+    'Standard',
+    'Suite',
+    'Economy',
+    'Family'
+  ];
   final List<String> roomStatuses = [
     'Available',
     'Occupied',
     'Under Maintenance',
     'Reserved'
   ];
-  final List<String> images = [
-    '1', // Assuming these are Image IDs
-    '2',
-    '3',
-    '4'
+  final List<String> availableAmenities = [
+    'WiFi',
+    'TV',
+    'Air Conditioning',
+    'Mini Bar',
+    'Balcony',
+    'Sea View',
+    'Kitchenette',
+    'Room Service'
   ];
 
   void _submitRoom() async {
-    final String roomType = roomTypeController.text;
-    final String pricePerDay = pricePerDayController.text;
-    final String roomArea = roomAreaController.text;
-    final String floorNumber = floorNumberController.text;
-    final String maxOccupancy = maxOccupancyController.text;
-    final String bedType = bedTypeController.text;
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        // Get employee ID from SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        int? employeeId = prefs.getInt('employeeId');
 
-    if (roomType.isNotEmpty &&
-        pricePerDay.isNotEmpty &&
-        roomArea.isNotEmpty &&
-        floorNumber.isNotEmpty &&
-        maxOccupancy.isNotEmpty &&
-        bedType.isNotEmpty &&
-        selectedRoomStatus != null &&
-        selectedImageId != null &&
-        selectedLastCleaned != null &&
-        selectedLastMaintenanceDate != null) {
-      final response = await http.post(
-        Uri.parse('http://$apiUrl:$apiPort/room'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'room_type': roomType,
-          'price_per_day': double.parse(pricePerDay),
-          'room_area': double.parse(roomArea),
-          'floor_number': int.parse(floorNumber),
-          'max_occupancy': int.parse(maxOccupancy),
-          'bed_type': bedType,
-          'room_status': selectedRoomStatus,
-          'image_id': int.parse(selectedImageId!),
-          'last_cleaned': selectedLastCleaned!.toIso8601String(),
-          'last_maintenance_date':
-              selectedLastMaintenanceDate!.toIso8601String(),
-        }),
-      );
+        if (employeeId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Error: Employee ID not found. Please login again.'),
+            ),
+          );
+          return;
+        }
 
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Room added successfully!')),
+        final response = await http.post(
+          Uri.parse('http://$apiUrl:$apiPort/room'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            'room_type': selectedRoomType,
+            'price_per_day': double.parse(pricePerDayController.text),
+            'room_area': double.parse(roomAreaController.text),
+            'floor_number': int.parse(floorNumberController.text),
+            'max_occupancy': int.parse(maxOccupancyController.text),
+            'bed_type': bedTypeController.text,
+            'room_status': selectedRoomStatus,
+            'amenities': selectedAmenities,
+            'added_by':
+                employeeId, // Using the employee ID from SharedPreferences
+          }),
         );
-        // Clear the form
-        roomTypeController.clear();
-        pricePerDayController.clear();
-        roomAreaController.clear();
-        floorNumberController.clear();
-        maxOccupancyController.clear();
-        bedTypeController.clear();
-        setState(() {
-          selectedRoomStatus = null;
-          selectedImageId = null;
-          selectedLastCleaned = null;
-          selectedLastMaintenanceDate = null;
-        });
-      } else {
+
+        if (response.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Room added successfully!')),
+          );
+          _clearForm();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${jsonDecode(response.body)['error']}'),
+            ),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error: ${jsonDecode(response.body)['error']}')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields correctly.')),
-      );
     }
+  }
+
+  // Rest of the code remains the same...
+  void _clearForm() {
+    pricePerDayController.clear();
+    roomAreaController.clear();
+    floorNumberController.clear();
+    maxOccupancyController.clear();
+    bedTypeController.clear();
+    setState(() {
+      selectedRoomType = null;
+      selectedRoomStatus = null;
+      selectedAmenities.clear();
+    });
+    _formKey.currentState?.reset();
   }
 
   @override
@@ -166,78 +179,106 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                     horizontal: screenWidth * 0.03,
                   ),
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: <Widget>[
-                        SizedBox(height: screenHeight * 0.03),
-                        FadeInUp(
-                          duration: const Duration(milliseconds: 1400),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      Colors.blueGrey[200] ?? Colors.blueGrey,
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: <Widget>[
-                                buildTextField(roomTypeController, "Room Type"),
-                                buildTextField(
-                                    pricePerDayController, "Price Per Day"),
-                                buildTextField(roomAreaController, "Room Area"),
-                                buildTextField(
-                                    floorNumberController, "Floor Number"),
-                                buildTextField(
-                                    maxOccupancyController, "Max Occupancy"),
-                                buildTextField(bedTypeController, "Bed Type"),
-                                buildDropdown(
-                                    "Select Room Status", roomStatuses,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: <Widget>[
+                          SizedBox(height: screenHeight * 0.03),
+                          FadeInUp(
+                            duration: const Duration(milliseconds: 1400),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        Colors.blueGrey[200] ?? Colors.blueGrey,
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: <Widget>[
+                                  buildDropdown(
+                                    "Room Type",
+                                    roomTypes,
                                     (value) {
-                                  setState(() {
-                                    selectedRoomStatus = value;
-                                  });
-                                }, selectedRoomStatus),
-                                buildDropdown("Select Image ID", images,
+                                      setState(() {
+                                        selectedRoomType = value;
+                                      });
+                                    },
+                                    selectedRoomType,
+                                  ),
+                                  buildTextField(
+                                    pricePerDayController,
+                                    "Price Per Day",
+                                    isNumeric: true,
+                                    isPriceField: true,
+                                  ),
+                                  buildTextField(
+                                    roomAreaController,
+                                    "Room Area",
+                                    isNumeric: true,
+                                    isAreaField: true,
+                                  ),
+                                  buildTextField(
+                                    floorNumberController,
+                                    "Floor Number",
+                                    isNumeric: true,
+                                    isFloorField: true,
+                                  ),
+                                  buildTextField(
+                                    maxOccupancyController,
+                                    "Max Occupancy",
+                                    isNumeric: true,
+                                    isOccupancyField: true,
+                                  ),
+                                  buildTextField(
+                                    bedTypeController,
+                                    "Bed Type",
+                                    isAlphabetOnly: true,
+                                  ),
+                                  buildDropdown(
+                                    "Room Status",
+                                    roomStatuses,
                                     (value) {
-                                  setState(() {
-                                    selectedImageId = value;
-                                  });
-                                }, selectedImageId),
-                                buildDateOfBirthField(context, "Last Cleaned"),
-                                buildDateOfBirthField(
-                                    context, "Last Maintenance Date"),
-                              ],
+                                      setState(() {
+                                        selectedRoomStatus = value;
+                                      });
+                                    },
+                                    selectedRoomStatus,
+                                  ),
+                                  buildAmenitiesSelection(),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: screenHeight * 0.05),
-                        FadeInUp(
-                          duration: const Duration(milliseconds: 1600),
-                          child: MaterialButton(
-                            onPressed: _submitRoom,
-                            height: 50,
-                            color: Colors.blueGrey[600],
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                "Submit",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                          SizedBox(height: screenHeight * 0.05),
+                          FadeInUp(
+                            duration: const Duration(milliseconds: 1600),
+                            child: MaterialButton(
+                              onPressed: _submitRoom,
+                              height: 50,
+                              color: Colors.blueGrey[600],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  "Submit",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -249,17 +290,22 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     );
   }
 
-  // Build Text Field Widget
-  Widget buildTextField(TextEditingController controller, String hintText,
-      {bool obscureText = false}) {
+  Widget buildTextField(
+    TextEditingController controller,
+    String hintText, {
+    bool isNumeric = false,
+    bool isAlphabetOnly = false,
+    bool isPriceField = false,
+    bool isAreaField = false,
+    bool isFloorField = false,
+    bool isOccupancyField = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
-        obscureText: obscureText,
-        keyboardType: hintText.contains('Price') || hintText.contains('Number')
-            ? TextInputType.number
-            : TextInputType.text,
+        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         decoration: InputDecoration(
           labelText: hintText,
           labelStyle: const TextStyle(color: Colors.grey),
@@ -269,14 +315,70 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
             borderRadius: BorderRadius.circular(12.0),
             borderSide: BorderSide.none,
           ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: const BorderSide(color: Colors.red, width: 2.0),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: const BorderSide(color: Colors.red, width: 2.0),
+          ),
         ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter $hintText';
+          }
+
+          if (isNumeric) {
+            if (!RegExp(r'^\d*\.?\d+$').hasMatch(value)) {
+              return 'Please enter a valid number';
+            }
+
+            if (isPriceField) {
+              double price = double.parse(value);
+              if (price < 1000 || price > 1000000) {
+                return 'Price must be between 1,000 and 1,000,000';
+              }
+            }
+
+            if (isAreaField) {
+              double area = double.parse(value);
+              if (area < 100 || area > 10000) {
+                return 'Area must be between 100 and 10,000 square feet';
+              }
+            }
+
+            if (isFloorField) {
+              int floor = int.parse(value);
+              if (floor < -5 || floor > 100) {
+                return 'Floor must be between -5 and 100';
+              }
+            }
+
+            if (isOccupancyField) {
+              int occupancy = int.parse(value);
+              if (occupancy < 1 || occupancy > 10) {
+                return 'Occupancy must be between 1 and 10';
+              }
+            }
+          }
+
+          if (isAlphabetOnly && !RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+            return 'Only alphabets and spaces are allowed';
+          }
+
+          return null;
+        },
       ),
     );
   }
 
-  // Build Dropdown Widget
-  Widget buildDropdown(String hint, List<String> items,
-      ValueChanged<String?> onChanged, String? selectedItem) {
+  Widget buildDropdown(
+    String hint,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+    String? selectedItem,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: DropdownButtonFormField<String>(
@@ -298,53 +400,66 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
             child: Text(item),
           );
         }).toList(),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a $hint';
+          }
+          return null;
+        },
       ),
     );
   }
 
-  // Build Date Field Widget
-  Widget buildDateOfBirthField(BuildContext context, String label) {
-    DateTime? selectedDate = label == "Last Cleaned"
-        ? selectedLastCleaned
-        : selectedLastMaintenanceDate;
-
-    return GestureDetector(
-      onTap: () async {
-        DateTime? picked = await showDatePicker(
-          context: context,
-          initialDate: selectedDate ?? DateTime.now(),
-          firstDate: DateTime(1900), // Set a realistic starting point
-          lastDate: DateTime.now(),
-        );
-
-        if (picked != selectedDate) {
-          setState(() {
-            if (label == "Last Cleaned") {
-              selectedLastCleaned = picked;
-            } else {
-              selectedLastMaintenanceDate = picked;
-            }
-          });
-        }
-      },
-      child: AbsorbPointer(
-        child: TextField(
-          controller: TextEditingController(
-            text: selectedDate != null
-                ? "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"
-                : "",
-          ),
-          decoration: InputDecoration(
-            labelText: label,
-            labelStyle: const TextStyle(color: Colors.grey),
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.0),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
+  Widget buildAmenitiesSelection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: FormField<List<String>>(
+        initialValue: selectedAmenities,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select at least one amenity';
+          }
+          return null;
+        },
+        builder: (FormFieldState<List<String>> state) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Select Amenities",
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+              const SizedBox(height: 8.0),
+              Wrap(
+                spacing: 10.0,
+                children: availableAmenities.map((amenity) {
+                  return FilterChip(
+                    label: Text(amenity),
+                    selected: selectedAmenities.contains(amenity),
+                    onSelected: (bool selected) {
+                      setState(() {
+                        if (selected) {
+                          selectedAmenities.add(amenity);
+                        } else {
+                          selectedAmenities.remove(amenity);
+                        }
+                        state.didChange(selectedAmenities);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              if (state.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    state.errorText!,
+                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

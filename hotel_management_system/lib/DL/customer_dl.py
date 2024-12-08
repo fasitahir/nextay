@@ -59,9 +59,9 @@ def add_customer():
         cursor.execute("""
             INSERT INTO CustomerTable 
             (FirstName, LastName, Email, PhoneNumber, Address, DOB, 
-             Nationality, IDType, BookingHistory Preferences, LastStayDate)
-            OUTPUT INSERTED.CustomerID
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             Nationality, IDType, BookingHistory, Preferences, LastStayDate)
+            OUTPUT INSERTED.Id
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data['first_name'],
             data['last_name'],
@@ -76,12 +76,12 @@ def add_customer():
             None  # LastStayDate will be updated when they check out
         ))
 
-        customer_id = cursor.fetchone()[0]
+        id = cursor.fetchone()[0]
         connection.commit()
         
         return jsonify({
             'message': 'Customer added successfully!',
-            'customer_id': customer_id
+            'customer_id': id
         }), 201
 
     except Exception as e:
@@ -91,10 +91,10 @@ def add_customer():
 @app.route('/customer/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
     cursor.execute("""
-        SELECT CustomerID, FirstName, LastName, Email, PhoneNumber,
+        SELECT Id, FirstName, LastName, Email, PhoneNumber,
                Address, DOB, Nationality, IDType, Preferences, LastStayDate
         FROM Customers
-        WHERE CustomerID = ?
+        WHERE Id = ?
     """, (customer_id,))
     
     customer = cursor.fetchone()

@@ -256,6 +256,8 @@ class EmployeeUpdateState extends State<EmployeeUpdate> {
                           }
                           if (!RegExp(r'(?=.*[0-9])').hasMatch(value)) {
                             passwordError = 'Add at least one number';
+                          } else {
+                            passwordError = null;
                           }
                         });
                       },

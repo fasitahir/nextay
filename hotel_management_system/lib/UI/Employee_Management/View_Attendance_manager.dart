@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
@@ -201,8 +202,15 @@ class Employee {
       firstName: json['first_name'],
       lastName: json['last_name'],
       attendanceStatus: AttendanceStatus.values.firstWhere(
-        (status) => status.toString().split('.').last == json['status'],
-        orElse: () => AttendanceStatus.present,
+        (status) =>
+            status.toString().split('.').last ==
+            json['attendance_status'].toString().toLowerCase(),
+        orElse: () {
+          if (kDebugMode) {
+            print('Unknown status: ${json['status']}');
+          }
+          return AttendanceStatus.present; // Fallback to default
+        },
       ),
     );
   }

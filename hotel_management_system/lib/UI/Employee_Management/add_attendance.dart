@@ -40,8 +40,8 @@ class _MarkAttendanceState extends State<MarkAttendance>
   }
 
   Future<void> _fetchEmployees() async {
-    final response =
-        await http.get(Uri.parse('http://$ip:$port/employees?date=$todayDate'));
+    final response = await http
+        .get(Uri.parse('http://$ip:$port/attendance?date=$todayDate'));
 
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
@@ -294,7 +294,7 @@ class Employee {
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
-    if (json['status'] == 'Absent') {
+    if (json['attendance_status'] == 'Absent') {
       return Employee(
         id: json['id'],
         firstName: json['first_name'],
@@ -304,7 +304,7 @@ class Employee {
         role: json['role'],
         attendanceStatus: AttendanceStatus.absent,
       );
-    } else if (json['status'] == 'Late') {
+    } else if (json['attendance_status'] == 'Late') {
       return Employee(
         id: json['id'],
         firstName: json['first_name'],

@@ -200,8 +200,8 @@ def mark_attendance():
             # Extract data from the record
             employee_id = record['employee_id']
             status = employeeFunctions.getAttendanceCode(record['status'])  # Expected values: 'present', 'absent', 'late'
-            date = record['date']      # Date format expected as 'yyyy-mm-dd'
-            
+            date = record['date']  # Date format expected as 'yyyy-mm-dd'
+
             try:
                 # Parse the date string into a date object
                 date = datetime.strptime(date, '%Y-%m-%d')
@@ -236,10 +236,12 @@ def mark_attendance():
             # Commit transaction for each record
             connection.commit()
 
+        # If everything is successful, return a success response
+        return jsonify({'message': 'Attendance marked successfully'}), 201
+
     except Exception as e:
         print(f"Error in marking attendance: {e}")
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/employees', methods=['GET'])
 def get_employees_attendance():
@@ -309,7 +311,6 @@ def get_attendance_forManager():
             WHERE isActive != 24 and att.Date = ?
         ''', (selected_date,))
         employees = cursor.fetchall()
-
         if employees is None:
             return jsonify({'error': 'No attendance records found'}), 404
 
@@ -324,8 +325,7 @@ def get_attendance_forManager():
                 'role': emp[5],
                 'attendance_status': emp[6] if len(emp) > 6 else 'Absent'
             })
-
-
+        print(f"Employee List: {employee_list}")
         return jsonify(employee_list), 200
     except Exception as e:
         print(f"Error fetching employees: {e}")
@@ -380,7 +380,7 @@ def get_employee_shift():
         shift = request.args.get('shift')
         print(f"Shift: {shift}")
 
-        if shift is "":
+        if shift == "":
             cursor.execute('''   
                 select FirstName, LastName, Email, l1.Value as role, l2.Value as shift
                 from Employee E

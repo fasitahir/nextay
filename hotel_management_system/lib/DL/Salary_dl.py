@@ -192,9 +192,9 @@ def get_employees_Salary_for_manager():
         # Get month and year from request arguments
         month = request.args.get('month', default=None, type=int)
         year = request.args.get('year', default=None, type=int)
-
         if month is None or year is None:
             # Fetch all employees and salary data if no month and year are provided
+            print("No month and year provided")
             cursor.execute("""
             SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, s.PayDate, s.Incentive
             FROM Employee e
@@ -204,6 +204,7 @@ def get_employees_Salary_for_manager():
             """)
         else:
             # Fetch data for a specific month and year
+            print("Month and year provided")
             cursor.execute("""
             SELECT e.Id, e.FirstName, e.LastName, e.SalaryAmount, e.ContactNo, e.IsPaid, l.value, s.PayDate, s.Incentive
             FROM Employee e
@@ -226,9 +227,9 @@ def get_employees_Salary_for_manager():
                 'is_paid': emp[5],
                 'Position': emp[6],
                 'pay_date': emp[7],
-                'incentive': emp[8],
+                'incentive': float(emp[8]) if emp[8] is not None else emp[8],
             })
-
+        print(employee_list)
         return jsonify(employee_list), 200
 
     except Exception as e:

@@ -26,10 +26,9 @@ def get_feedbacks():
                L.Value AS FeedbackType, 
                F.Feedback, 
                F.Rating, 
-               F.Status,
-               F.Id AS FeedbackId
+               F.FeedbackID AS FeedbackId
         FROM Feedback F
-        JOIN CustomerTable C ON F.CustomerId = C.Id
+        JOIN Customer C ON F.CustomerId = C.CustomerID
         JOIN Lookup L ON F.Type = L.Id  -- Joining with Lookup table
         WHERE L.Category = 'FeedBackType'  -- Ensure we're filtering by the correct category
         """
@@ -43,8 +42,7 @@ def get_feedbacks():
                 'feedbackType': feedback[1],   # Feedback Type fetched from Lookup
                 'feedback': feedback[2],        # Feedback text
                 'rating': feedback[3],          # Rating
-                'status': feedback[4],          # Status (Reviewed or Pending)
-                'feedbackId': feedback[5]       # Feedback ID
+                'feedbackId': feedback[4]       # Feedback ID
             }
             for feedback in feedbacks
         ]
