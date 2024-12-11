@@ -1,24 +1,5 @@
+# lib/BL/room.py
 from datetime import datetime
-
-class Room:
-    def __init__(
-        self, room_type, price_per_day, room_area, floor_number,
-        max_occupancy, bed_type, room_status, image_id,
-        last_cleaned, last_maintenance_date, 
-        added_by=None, updated_by=None
-    ):
-        self.room_type = room_type
-        self.price_per_day = price_per_day
-        self.room_area = room_area
-        self.floor_number = floor_number
-        self.max_occupancy = max_occupancy
-        self.bed_type = bed_type
-        self.room_status = getRoomStatusCode(room_status)
-        self.image_id = image_id
-        self.last_cleaned = parseDate(last_cleaned)
-        self.last_maintenance_date = parseDate(last_maintenance_date)
-        self.added_by = added_by  # Should be set based on the current user
-        self.updated_by = updated_by  # Should be set based on the current user
 
 def getRoomStatusCode(status):
     status_mapping = {
@@ -36,12 +17,21 @@ def parseDate(date_str):
     except ValueError:
         return datetime.now()  # Default to current date if parsing fails
 
-def getRoomStatus(status_code):
-    code_mapping = {
-        1: 'Available',
-        2: 'Occupied',
-        3: 'Under Maintenance',
-        4: 'Reserved',
-        99: 'Deleted'
-    }
-    return code_mapping.get(status_code, 'Unknown')
+def formatDate(date):
+    return date.strftime("%Y-%m-%d") if date else None
+
+class Room:
+    def __init__(self, room_type, price_per_day, room_area, floor_number, max_occupancy, bed_type, room_status,
+                 last_cleaned=None, last_maintenance_date=None, amenities=[], added_by=None, updated_by=None):
+        self.room_type = room_type
+        self.price_per_day = price_per_day
+        self.room_area = room_area
+        self.floor_number = floor_number
+        self.max_occupancy = max_occupancy
+        self.bed_type = bed_type
+        self.room_status = room_status
+        self.last_cleaned = parseDate(last_cleaned) if last_cleaned else None
+        self.last_maintenance_date = parseDate(last_maintenance_date) if last_maintenance_date else None
+        self.amenities = amenities
+        self.added_by = added_by
+        self.updated_by = updated_by

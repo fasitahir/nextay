@@ -1,4 +1,3 @@
-# room_dl.py
 from flask import Blueprint, request, jsonify
 import DB_config as db
 import os
@@ -31,55 +30,61 @@ def add_room():
         if not all(key in data for key in required_fields):
             return jsonify({'error': 'Missing required fields'}), 400
 
-        room_status_code = getRoomStatusCode(data['room_status'])
+        # Start a transaction
+      
+        
+        try:
+            room_status_code = getRoomStatusCode(data['room_status'])
 
-        room = Room(
-            room_type=data['room_type'],
-            price_per_day=data['price_per_day'],
-            room_area=data['room_area'],
-            floor_number=data['floor_number'],
-            max_occupancy=data['max_occupancy'],
-            bed_type=data['bed_type'],
-            room_status=room_status_code,
-            amenities=data['amenities'],
-            added_by=data['added_by'],
-            updated_by=None
-        )
-
-        cursor.execute("""
-            INSERT INTO Rooms 
-            (RoomType, PricePerDay, RoomArea, FloorNumber, MaxOccupancy, BedType, RoomStatus, ImageId, LastCleaned, LastMaintenanceDate, AddedBy, UpdatedBy)
-            OUTPUT INSERTED.RoomID
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            room.room_type, room.price_per_day, room.room_area, room.floor_number,
-            room.max_occupancy, room.bed_type, room.room_status, None, None, None,
-            room.added_by, room.updated_by
-        ))
-
-        room_id = cursor.fetchone()[0]
-        print(f"Inserted RoomID: {room_id}")
-
-        for amenity in room.amenities:
+            # Insert into Rooms table
             cursor.execute("""
-                INSERT INTO Amenities (RoomID, Name)
-                VALUES (?, ?)
-            """, (room_id, amenity))
+                INSERT INTO Rooms 
+                (RoomType, PricePerDay, RoomArea, FloorNumber, MaxOccupancy, 
+                BedType, RoomStatus, LastCleaned, LastMaintenanceDate, 
+                AddedBy, UpdatedBy)
+                OUTPUT INSERTED.RoomID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                data['room_type'], data['price_per_day'], data['room_area'], 
+                data['floor_number'], data['max_occupancy'], data['bed_type'], 
+                room_status_code,None, None, data['added_by'], None
+            ))
 
-        connection.commit()
-        return jsonify({'message': 'Room added successfully!', 'room_id': room_id}), 201
+            room_id = cursor.fetchone()[0]
+            
+            # Insert amenities with error handling
+            if data['amenities'] and isinstance(data['amenities'], list):
+                amenities_values = [(room_id, amenity) for amenity in data['amenities']]
+                cursor.executemany("""
+                    INSERT INTO Amenities (RoomID, Name)
+                    VALUES (?, ?)
+                """, amenities_values)
+            print("Commiting")
+            # Commit the transaction
+            connection.commit()
+            
+            return jsonify({
+                'message': 'Room added successfully!',
+                'room_id': room_id,
+                'amenities_added': len(data['amenities']) if data['amenities'] else 0
+            }), 201
+
+        except Exception as e:
+            # Rollback in case of error
+            cursor.execute("ROLLBACK")
+            raise e
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error adding room: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
+    
+    
 @app.route('/rooms', methods=['GET'])
 def get_rooms():
     try:
         cursor.execute("""
-            SELECT R.RoomID, RoomType, PricePerDay, RoomArea, FloorNumber,
-                   MaxOccupancy, BedType, l.Value as RoomStatus, ImageId,
-                   LastCleaned, LastMaintenanceDate
+            SELECT R.RoomID, RoomType, l.Value as RoomStatus, LastCleaned, PricePerDay, RoomArea, FloorNumber,
+                   MaxOccupancy, BedType, LastMaintenanceDate
             FROM Rooms R
             LEFT JOIN Lookup l ON l.Id = R.RoomStatus
             WHERE R.RoomStatus != 24
@@ -102,15 +107,14 @@ def get_rooms():
             room_list.append({
                 'id': room[0],
                 'room_type': room[1],
-                'price_per_day': room[2],
-                'room_area': room[3],
-                'floor_number': room[4],
-                'max_occupancy': room[5],
-                'bed_type': room[6],
-                'room_status': room[7],
-                'image_id': room[8],
-                'last_cleaned': room[9].strftime("%Y-%m-%d") if room[9] else None,
-                'last_maintenance_date': room[10].strftime("%Y-%m-%d") if room[10] else None,
+                'room_status': room[2],
+                'last_cleaned': room[3].strftime("%Y-%m-%d") if room[3] else None,
+                'price_per_day': room[4],
+                'room_area': room[5],
+                'floor_number': room[6],
+                'max_occupancy': room[7],
+                'bed_type': room[8],
+                'last_maintenance_date': room[9].strftime("%Y-%m-%d") if room[9] else None,
                 'amenities': amenities  # Include amenities in the response
             })
 
@@ -227,15 +231,99 @@ def delete_room(room_id):
 @app.route('/rooms/<int:room_id>/checkin', methods=['PUT'])
 def check_in_room(room_id):
     try:
-        logging.info(f"Checking in room with ID: {room_id}")
+        data = request.json
+        customer_id = data.get('customer_id')
+        check_in_date = data.get('check_in_date')
+        number_of_guests = data.get('number_of_guests')
+        total_amount = data.get('total_amount')
+        special_request = data.get('special_request')
+        booked_by = data.get('booked_by')  # ID of the user making the booking (e.g., staff member)
+
+        # Validate check-in date format
+        try:
+            parsed_date = datetime.fromisoformat(check_in_date.replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({'error': 'Invalid check-in date format'}), 400
+
+        if not customer_id:
+            return jsonify({'error': 'customer_id is required'}), 400
+        if not number_of_guests or not total_amount:
+            return jsonify({'error': 'number_of_guests and total_amount are required'}), 400
+
+        # First verify if the room is available
+        cursor.execute("SELECT RoomStatus FROM Rooms WHERE RoomID = ?", (room_id,))
+        room = cursor.fetchone()
+        
+        if not room:
+            return jsonify({'error': 'Room not found'}), 404
+            
+        if room[0] != 1:  # Assuming 1 is the status code for 'Available'
+            return jsonify({'error': 'Room is not available for check-in'}), 400
+
+        # Create a booking record
+        #booking_response = add_booking(customer_id, room_id, check_in_date, number_of_guests, total_amount, special_request, booked_by)
+        
+        # if booking_response[1] != 200:
+        #     return booking_response
+        print("Hello1")
+        # Update room status to occupied (status code 2)
         cursor.execute("UPDATE Rooms SET RoomStatus = 2 WHERE RoomID = ?", (room_id,))
+        print("Hello2")
         connection.commit()
-        logging.info("Room checked in successfully")
+        logging.info(f"Room {room_id} checked in successfully for customer {customer_id}")
         return jsonify({'message': 'Room checked in successfully'}), 200
+
+    except Exception as e:
+        logging.error(f"Error checking in room: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# Create booking function
+def add_booking(customer_id, room_id, payment_status,payment_method,check_in_date, number_of_guests, total_amount, special_request, booked_by):
+    try:
+        cursor.execute("""
+            INSERT INTO Booking 
+            (CustomerID, RoomID, CheckInTime,PaymentStatus,PaymentMethod, NumberOfGuests, TotalAmount, SpecialRequest, Addedby)
+            VALUES (?, ?, ?, ?, ?,?, ?,?, ?)
+        """, (customer_id, room_id, check_in_date,5,7, number_of_guests, total_amount, special_request, booked_by))
+
+        connection.commit()
+        return jsonify({'message': 'Booking added successfully'}), 201
+    
+    except Exception as e:
+        # logging.error(f"Error adding booking: {str(e)}")
+        return jsonify({'error': 'Failed to add booking'}), 500
+
+
+@app.route('/booking', methods=['POST'])
+def create_booking():
+    try:
+        data = request.json
+        customer_id = data.get('customer_id')
+        room_id = data.get('room_id')
+        check_in_date = data.get('check_in_date')
+        number_of_guests = data.get('number_of_guests')
+        total_amount = data.get('total_amount')
+        special_request = data.get('special_request')
+        booked_by = data.get('booked_by')
+
+        if not customer_id or not room_id or not check_in_date or not number_of_guests or not total_amount:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Call the add_booking function to add a new booking record
+        booking_response = add_booking(customer_id, room_id, check_in_date, 5,7, number_of_guests, total_amount, special_request, booked_by)
+        return booking_response
+
+    except Exception as e:
+        logging.error(f"Error creating booking: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
     except Exception as e:
         logging.error(f"Error checking in room: {e}")
+        connection.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
 @app.route('/rooms/<int:room_id>/clean', methods=['PUT'])
 def clean_room(room_id):
     try:

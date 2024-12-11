@@ -57,10 +57,10 @@ def add_customer():
 
         # Insert the customer data
         cursor.execute("""
-            INSERT INTO CustomerTable 
+            INSERT INTO Customer 
             (FirstName, LastName, Email, PhoneNumber, Address, DOB, 
              Nationality, IDType, BookingHistory, Preferences, LastStayDate)
-            OUTPUT INSERTED.Id
+            OUTPUT INSERTED.CustomerID
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data['first_name'],
@@ -94,7 +94,7 @@ def get_customer(customer_id):
         SELECT Id, FirstName, LastName, Email, PhoneNumber,
                Address, DOB, Nationality, IDType, Preferences, LastStayDate
         FROM Customers
-        WHERE Id = ?
+        WHERE CustomerId = ?
     """, (customer_id,))
     
     customer = cursor.fetchone()

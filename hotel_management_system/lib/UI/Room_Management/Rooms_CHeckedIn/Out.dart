@@ -3,10 +3,17 @@ import 'package:animate_do/animate_do.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final String? apiUrl = dotenv.env['IP'];
 final String? apiPort = dotenv.env['PORT'];
+
+// Update phone pattern to require 11 digits starting with 0
+final RegExp phonePattern = RegExp(r'^0\d{10}$');
+final RegExp emailPattern = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+final RegExp namePattern =
+    RegExp(r"^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$");
 
 class CustomerData {
   final String firstName;
@@ -14,7 +21,7 @@ class CustomerData {
   final String email;
   final String phoneNumber;
   final String address;
-  final String dob; // Change to String
+  final String dob;
   final String nationality;
   final int idType;
   final String? preferences;
@@ -25,7 +32,7 @@ class CustomerData {
     required this.email,
     required this.phoneNumber,
     required this.address,
-    required this.dob, // Keep as String
+    required this.dob,
     required this.nationality,
     required this.idType,
     this.preferences,
@@ -37,11 +44,34 @@ class CustomerData {
         'email': email,
         'phone_number': phoneNumber,
         'address': address,
-        'dob': dob, // Store as String
+        'dob': dob,
         'nationality': nationality,
         'id_type': idType,
         'preferences': preferences,
       };
+}
+
+// Add ValidationState class to manage form validation
+class ValidationState {
+  String? firstNameError;
+  String? lastNameError;
+  String? emailError;
+  String? phoneError;
+  String? addressError;
+  String? dobError;
+  String? nationalityError;
+  String? numberOfGuestsError;
+
+  bool get isValid {
+    return firstNameError == null &&
+        lastNameError == null &&
+        emailError == null &&
+        phoneError == null &&
+        addressError == null &&
+        dobError == null &&
+        nationalityError == null &&
+        numberOfGuestsError == null;
+  }
 }
 
 class StaffRoomsPage extends StatefulWidget {
@@ -102,6 +132,10 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
   }
 
   Future<void> checkInRoom(int index) async {
+    final room = rooms[index];
+    int numberOfGuests = 1;
+    final validationState = ValidationState();
+
     CustomerData? customerData = await showDialog<CustomerData>(
       context: context,
       barrierDismissible: false,
@@ -111,136 +145,303 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
         String email = '';
         String phoneNumber = '';
         String address = '';
-        String dob = ''; // Change to String
+        String dob = '';
         String nationality = '';
-        int idType = 11; // Default to national id card
+        int idType = 11;
         String preferences = '';
 
-        return AlertDialog(
-          title: const Text('Customer Check-in'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  decoration: const InputDecoration(labelText: 'First Name*'),
-                  onChanged: (value) => firstName = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Last Name*'),
-                  onChanged: (value) => lastName = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Email*'),
-                  onChanged: (value) => email = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Phone Number*'),
-                  onChanged: (value) => phoneNumber = value,
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Address*'),
-                  onChanged: (value) => address = value,
-                ),
-                InkWell(
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(1900),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        dob = DateFormat('yyyy-MM-dd')
-                            .format(picked); // Store as String
-                      });
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration:
-                        const InputDecoration(labelText: 'Date of Birth*'),
-                    child: Text(
-                      dob.isEmpty ? 'Select Date' : dob,
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            void validateFirstName(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.firstNameError = 'First name is required';
+                } else if (!namePattern.hasMatch(value)) {
+                  validationState.firstNameError = 'Enter a valid first name';
+                } else if (value.length < 2) {
+                  validationState.firstNameError =
+                      'Name must be at least 2 characters';
+                } else {
+                  validationState.firstNameError = null;
+                }
+              });
+            }
+
+            void validateLastName(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.lastNameError = 'Last name is required';
+                } else if (!namePattern.hasMatch(value)) {
+                  validationState.lastNameError = 'Enter a valid last name';
+                } else if (value.length < 2) {
+                  validationState.lastNameError =
+                      'Name must be at least 2 characters';
+                } else {
+                  validationState.lastNameError = null;
+                }
+              });
+            }
+
+            void validateEmail(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.emailError = 'Email is required';
+                } else if (!emailPattern.hasMatch(value)) {
+                  validationState.emailError = 'Enter a valid email address';
+                } else {
+                  validationState.emailError = null;
+                }
+              });
+            }
+
+            void validatePhone(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.phoneError = 'Phone number is required';
+                } else if (!phonePattern.hasMatch(value)) {
+                  validationState.phoneError =
+                      'Phone number must start with 0 and be exactly 11 digits';
+                } else {
+                  validationState.phoneError = null;
+                }
+              });
+            }
+
+            void validateAddress(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.addressError = 'Address is required';
+                } else if (value.length < 5) {
+                  validationState.addressError = 'Address is too short';
+                } else {
+                  validationState.addressError = null;
+                }
+              });
+            }
+
+            void validateNationality(String value) {
+              setState(() {
+                if (value.isEmpty) {
+                  validationState.nationalityError = 'Nationality is required';
+                } else if (!namePattern.hasMatch(value)) {
+                  validationState.nationalityError =
+                      'Enter a valid nationality';
+                } else {
+                  validationState.nationalityError = null;
+                }
+              });
+            }
+
+            void validateNumberOfGuests(String value) {
+              setState(() {
+                final number = int.tryParse(value);
+                if (number == null || number < 1) {
+                  validationState.numberOfGuestsError =
+                      'Enter a valid number of guests';
+                } else if (number > room['max_occupancy']) {
+                  validationState.numberOfGuestsError =
+                      'Cannot exceed maximum occupancy (${room['max_occupancy']})';
+                } else {
+                  validationState.numberOfGuestsError = null;
+                }
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Customer Check-in'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'First Name*',
+                        errorText: validationState.firstNameError,
+                      ),
+                      onChanged: (value) {
+                        firstName = value;
+                        validateFirstName(value);
+                      },
                     ),
-                  ),
-                ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Nationality*'),
-                  onChanged: (value) => nationality = value,
-                ),
-                DropdownButtonFormField<int>(
-                  decoration: const InputDecoration(labelText: 'ID Type*'),
-                  value: idType,
-                  items: const [
-                    DropdownMenuItem(value: 9, child: Text('Passport')),
-                    DropdownMenuItem(value: 10, child: Text('Driver License')),
-                    DropdownMenuItem(
-                        value: 11, child: Text('National ID Card')),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Last Name*',
+                        errorText: validationState.lastNameError,
+                      ),
+                      onChanged: (value) {
+                        lastName = value;
+                        validateLastName(value);
+                      },
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Email*',
+                        errorText: validationState.emailError,
+                      ),
+                      onChanged: (value) {
+                        email = value;
+                        validateEmail(value);
+                      },
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number*',
+                        errorText: validationState.phoneError,
+                        hintText: '0XXXXXXXXXX',
+                      ),
+                      keyboardType: TextInputType.phone,
+                      maxLength: 11,
+                      onChanged: (value) {
+                        phoneNumber = value;
+                        validatePhone(value);
+                      },
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Address*',
+                        errorText: validationState.addressError,
+                      ),
+                      onChanged: (value) {
+                        address = value;
+                        validateAddress(value);
+                      },
+                    ),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now().subtract(
+                              const Duration(days: 6570)), // 18 years ago
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            dob = DateFormat('yyyy-MM-dd').format(picked);
+                            // Validate age
+                            final age =
+                                DateTime.now().difference(picked).inDays ~/ 365;
+                            if (age < 18) {
+                              validationState.dobError =
+                                  'Must be at least 18 years old';
+                            } else {
+                              validationState.dobError = null;
+                            }
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Date of Birth*',
+                          errorText: validationState.dobError,
+                        ),
+                        child: Text(
+                          dob.isEmpty ? 'Select Date' : dob,
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Nationality*',
+                        errorText: validationState.nationalityError,
+                      ),
+                      onChanged: (value) {
+                        nationality = value;
+                        validateNationality(value);
+                      },
+                    ),
+                    DropdownButtonFormField<int>(
+                      decoration: const InputDecoration(labelText: 'ID Type*'),
+                      value: idType,
+                      items: const [
+                        DropdownMenuItem(value: 9, child: Text('Passport')),
+                        DropdownMenuItem(
+                            value: 10, child: Text('Driver License')),
+                        DropdownMenuItem(
+                            value: 11, child: Text('National ID Card')),
+                      ],
+                      onChanged: (value) => idType = value!,
+                    ),
+                    TextField(
+                      decoration:
+                          const InputDecoration(labelText: 'Preferences'),
+                      onChanged: (value) => preferences = value,
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Number of Guests*',
+                        errorText: validationState.numberOfGuestsError,
+                        hintText: 'Maximum: ${room['max_occupancy']}',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        numberOfGuests = int.tryParse(value) ?? 1;
+                        validateNumberOfGuests(value);
+                      },
+                    ),
                   ],
-                  onChanged: (value) => idType = value!,
                 ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Preferences'),
-                  onChanged: (value) => preferences = value,
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                TextButton(
+                  child: const Text('Check In'),
+                  onPressed: () {
+                    // Validate all fields one last time
+                    validateFirstName(firstName);
+                    validateLastName(lastName);
+                    validateEmail(email);
+                    validatePhone(phoneNumber);
+                    validateAddress(address);
+                    validateNationality(nationality);
+                    validateNumberOfGuests(numberOfGuests.toString());
+
+                    if (dob.isEmpty) {
+                      setState(() {
+                        validationState.dobError = 'Date of birth is required';
+                      });
+                      return;
+                    }
+
+                    if (!validationState.isValid) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('Please correct the errors in the form'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.of(context).pop(CustomerData(
+                      firstName: firstName,
+                      lastName: lastName,
+                      email: email,
+                      phoneNumber: phoneNumber,
+                      address: address,
+                      dob: dob,
+                      nationality: nationality,
+                      idType: idType,
+                      preferences: preferences,
+                    ));
+                  },
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: const Text('Check In'),
-              onPressed: () {
-                if (firstName.isEmpty ||
-                    lastName.isEmpty ||
-                    email.isEmpty ||
-                    phoneNumber.isEmpty ||
-                    address.isEmpty ||
-                    dob.isEmpty ||
-                    nationality.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Please fill all required fields')),
-                  );
-                  return;
-                }
-
-                // Age validation
-                final DateTime dobDate = DateTime.parse(dob);
-                final int age = DateTime.now().year - dobDate.year;
-                if (age < 18) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('You must be at least 18 years old')),
-                  );
-                  return;
-                }
-
-                Navigator.of(context).pop(CustomerData(
-                  firstName: firstName,
-                  lastName: lastName,
-                  email: email,
-                  phoneNumber: phoneNumber,
-                  address: address,
-                  dob: dob, // Store as String
-                  nationality: nationality,
-                  idType: idType,
-                  preferences: preferences,
-                ));
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );
+
     if (customerData == null) return;
 
     try {
       final roomId = rooms[index]['id'];
+      final totalAmount = room['price_per_day'];
 
       // First save customer data
       final customerResponse = await http.post(
@@ -255,14 +456,13 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
           'email': customerData.email,
           'phone_number': customerData.phoneNumber,
           'address': customerData.address,
-          'dob': customerData.dob, // Store as String
+          'dob': customerData.dob,
           'nationality': customerData.nationality,
           'id_type': customerData.idType,
-          'preferences': customerData.preferences
+          'preferences': customerData.preferences,
         }),
       );
-      print('Customer response status: ${customerResponse.statusCode}');
-      print('Customer response body: ${customerResponse.body}');
+
       if (customerResponse.statusCode != 201) {
         final errorData = json.decode(customerResponse.body);
         throw Exception(errorData['error'] ?? 'Failed to save customer data');
@@ -271,8 +471,41 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
       final responseData = json.decode(customerResponse.body);
       final customerId = responseData['customer_id'];
 
-      // Then check in the room
-      final response = await http.put(
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? employeeId = prefs.getInt('employeeId');
+
+      // Create booking
+      final bookingResponse = await http.post(
+        Uri.parse('http://$apiUrl:$apiPort/booking'),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: json.encode({
+          'customer_id': customerId,
+          'room_id': roomId,
+          'check_in_date': DateTime.now().toIso8601String(),
+          'number_of_guests': numberOfGuests,
+          'special_request': customerData.preferences,
+          'total_amount': totalAmount,
+          'booked_by': employeeId
+        }),
+      );
+
+      if (bookingResponse.statusCode != 201) {
+        final errorData = json.decode(bookingResponse.body);
+        throw Exception(errorData['error'] ?? 'Failed to create booking');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Room checked in successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Check in the room
+      final checkInResponse = await http.put(
         Uri.parse('http://$apiUrl:$apiPort/rooms/$roomId/checkin'),
         headers: {
           "Content-Type": "application/json",
@@ -280,11 +513,15 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
         },
         body: json.encode({
           'customer_id': customerId,
-          'check_in_date': DateTime.now().toString()
+          'check_in_date': DateTime.now().toIso8601String(),
+          'number_of_guests': numberOfGuests,
+          'total_amount': totalAmount,
+          'special_request': customerData.preferences,
+          'booked_by': employeeId
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (checkInResponse.statusCode == 200) {
         setState(() {
           rooms[index]['room_status'] = 'Occupied';
         });
@@ -295,17 +532,18 @@ class _StaffRoomsPageState extends State<StaffRoomsPage> {
           ),
         );
       } else {
-        final errorData = json.decode(response.body);
+        final errorData = json.decode(checkInResponse.body);
         throw Exception(errorData['error'] ?? 'Failed to check-in room');
       }
     } catch (e) {
       print('Error checking in room: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error checking in room: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Stack Trace: ${StackTrace.current}');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Error checking in room: $e'),
+      //     backgroundColor: Colors.red,
+      //   ),
+      // );
     }
   }
 

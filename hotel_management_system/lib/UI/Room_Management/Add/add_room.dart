@@ -26,13 +26,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
   String? selectedRoomStatus;
   List<String> selectedAmenities = [];
 
-  final List<String> roomTypes = [
-    'Deluxe',
-    'Standard',
-    'Suite',
-    'Economy',
-    'Family'
-  ];
+  final List<String> roomTypes = ['Deluxe', 'Standard', 'Suite', 'Economy', 'Family'];
   final List<String> roomStatuses = [
     'Available',
     'Occupied',
@@ -50,60 +44,63 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     'Room Service'
   ];
 
-  void _submitRoom() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      try {
-        // Get employee ID from SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        int? employeeId = prefs.getInt('employeeId');
+void _submitRoom() async {
+  if (_formKey.currentState?.validate() ?? false) {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int? employeeId = prefs.getInt('employeeId');
 
-        if (employeeId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Error: Employee ID not found. Please login again.'),
-            ),
-          );
-          return;
-        }
-
-        final response = await http.post(
-          Uri.parse('http://$apiUrl:$apiPort/room'),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            'room_type': selectedRoomType,
-            'price_per_day': double.parse(pricePerDayController.text),
-            'room_area': double.parse(roomAreaController.text),
-            'floor_number': int.parse(floorNumberController.text),
-            'max_occupancy': int.parse(maxOccupancyController.text),
-            'bed_type': bedTypeController.text,
-            'room_status': selectedRoomStatus,
-            'amenities': selectedAmenities,
-            'added_by':
-                employeeId, // Using the employee ID from SharedPreferences
-          }),
-        );
-
-        if (response.statusCode == 201) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Room added successfully!')),
-          );
-          _clearForm();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${jsonDecode(response.body)['error']}'),
-            ),
-          );
-        }
-      } catch (e) {
+      if (employeeId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          const SnackBar(content: Text('Error: Employee ID not found. Please login again.')),
+        );
+        return;
+      }
+
+      final payload = {
+        'room_type': selectedRoomType,
+        'price_per_day': double.parse(pricePerDayController.text),
+        'room_area': double.parse(roomAreaController.text),
+        'floor_number': int.parse(floorNumberController.text),
+        'max_occupancy': int.parse(maxOccupancyController.text),
+        'bed_type': bedTypeController.text,
+        'room_status': selectedRoomStatus,
+        'amenities': selectedAmenities,
+        'added_by': employeeId,
+      };
+
+      // Debug print
+      print('Sending payload: ${jsonEncode(payload)}');
+
+      final response = await http.post(
+        Uri.parse('http://$apiUrl:$apiPort/room'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(payload),
+      );
+
+      final responseData = jsonDecode(response.body);
+      print('Response: ${response.statusCode} - $responseData');
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(
+            'Room added successfully! Added ${responseData['amenities_added']} amenities.'
+          )),
+        );
+        _clearForm();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${responseData['error']}')),
         );
       }
+    } catch (e) {
+      print('Error submitting room: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
-
+}
   // Rest of the code remains the same...
   void _clearForm() {
     pricePerDayController.clear();
@@ -193,8 +190,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
-                                    color:
-                                        Colors.blueGrey[200] ?? Colors.blueGrey,
+                                    color: Colors.blueGrey[200] ?? Colors.blueGrey,
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),

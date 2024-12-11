@@ -296,7 +296,7 @@ class _PaySalaryForManagerState extends State<PaySalaryForManager> {
                                           Text('Salary: \$ $salary'),
                                           Text(
                                               'Designation: ${employee.position}'),
-                                          // if (employee.incentive != null)
+                                          if (employee.incentive != null)
                                             Text(
                                                 'Incentive: ${employee.incentive}',
                                                 style: TextStyle(

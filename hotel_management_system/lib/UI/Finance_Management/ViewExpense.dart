@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -25,33 +24,34 @@ class _ViewExpensesState extends State<ViewExpenses> {
   }
 
   // Function to fetch all expenses (no date filtering)
-Future<List<Expense>> fetchExpenses() async {
-  String url = 'http://$Ip:$Port/get_expenses'; // Update with your API endpoint
+  Future<List<Expense>> fetchExpenses() async {
+    String url =
+        'http://$Ip:$Port/get_expenses'; // Update with your API endpoint
 
-  final response = await http.get(Uri.parse(url));
+    final response = await http.get(Uri.parse(url));
 
-  if (response.statusCode == 200) {
-    // Log the response body to inspect its structure
-    print('Response body: ${response.body}');
-    
-    // Check if the response is a Map or List
-    var data = json.decode(response.body);
+    if (response.statusCode == 200) {
+      // Log the response body to inspect its structure
+      print('Response body: ${response.body}');
 
-    if (data is List) {
-      // If it's a List, directly map it to List<Expense>
-      return data.map((item) => Expense.fromJson(item)).toList();
-    } else if (data is Map) {
-      // If it's a Map, check if it contains the list in a key
-      // For example: { "expenses": [list_of_expenses] }
-      var expensesList = data['expenses'] as List;
-      return expensesList.map((item) => Expense.fromJson(item)).toList();
+      // Check if the response is a Map or List
+      var data = json.decode(response.body);
+
+      if (data is List) {
+        // If it's a List, directly map it to List<Expense>
+        return data.map((item) => Expense.fromJson(item)).toList();
+      } else if (data is Map) {
+        // If it's a Map, check if it contains the list in a key
+        // For example: { "expenses": [list_of_expenses] }
+        var expensesList = data['expenses'] as List;
+        return expensesList.map((item) => Expense.fromJson(item)).toList();
+      } else {
+        throw Exception('Unexpected data format');
+      }
     } else {
-      throw Exception('Unexpected data format');
+      throw Exception('Failed to load expense data');
     }
-  } else {
-    throw Exception('Failed to load expense data');
   }
-}
 
   // Fetch all expenses
   void _fetchExpenses() async {
@@ -163,7 +163,8 @@ Future<List<Expense>> fetchExpenses() async {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(15.0), // Added padding for better spacing
+                                  padding: const EdgeInsets.all(
+                                      15.0), // Added padding for better spacing
                                   child: ListTile(
                                     leading: Icon(
                                       Icons.money,
@@ -171,7 +172,8 @@ Future<List<Expense>> fetchExpenses() async {
                                     ),
                                     title: Text(
                                       'Expense: \$ $amount',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     subtitle: Column(
                                       crossAxisAlignment:

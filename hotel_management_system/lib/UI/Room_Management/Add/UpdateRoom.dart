@@ -17,19 +17,8 @@ class RoomUpdate extends StatefulWidget {
 
 class RoomUpdateState extends State<RoomUpdate> {
   List<Map<String, dynamic>> rooms = [];
-  final List<String> roomTypes = [
-    'Deluxe',
-    'Standard',
-    'Suite',
-    'Economy',
-    'Family'
-  ];
-  final List<String> roomStatuses = [
-    'Available',
-    'Occupied',
-    'Under Maintenance',
-    'Reserved'
-  ];
+  final List<String> roomTypes = ['Deluxe', 'Standard', 'Suite', 'Economy', 'Family'];
+  final List<String> roomStatuses = ['Available', 'Occupied', 'Under Maintenance', 'Reserved'];
   final List<String> availableAmenities = [
     'WiFi',
     'TV',
@@ -40,7 +29,7 @@ class RoomUpdateState extends State<RoomUpdate> {
     'Kitchenette',
     'Room Service'
   ];
-
+  
   @override
   void initState() {
     super.initState();
@@ -49,26 +38,23 @@ class RoomUpdateState extends State<RoomUpdate> {
 
   Future<void> fetchRooms() async {
     try {
-      final response =
-          await http.get(Uri.parse('http://$apiUrl:$apiPort/rooms'));
+      final response = await http.get(Uri.parse('http://$apiUrl:$apiPort/rooms'));
 
       if (response.statusCode == 200) {
         final List<dynamic> roomData = json.decode(response.body);
         setState(() {
-          rooms = roomData
-              .map((room) => {
-                    'id': room['id'],
-                    'room_type': room['room_type'],
-                    'price_per_day': room['price_per_day'],
-                    'room_area': room['room_area'],
-                    'floor_number': room['floor_number'],
-                    'max_occupancy': room['max_occupancy'],
-                    'bed_type': room['bed_type'],
-                    'room_status': room['room_status'],
-                    'last_maintenance_date': room['last_maintenance_date'],
-                    'amenities': List<String>.from(room['amenities'] ?? []),
-                  })
-              .toList();
+          rooms = roomData.map((room) => {
+            'id': room['id'],
+            'room_type': room['room_type'],
+            'price_per_day': room['price_per_day'],
+            'room_area': room['room_area'],
+            'floor_number': room['floor_number'],
+            'max_occupancy': room['max_occupancy'],
+            'bed_type': room['bed_type'],
+            'room_status': room['room_status'],
+            'last_maintenance_date': room['last_maintenance_date'],
+            'amenities': List<String>.from(room['amenities'] ?? []),
+          }).toList();
         });
       } else {
         throw Exception('Failed to load rooms');
@@ -81,68 +67,61 @@ class RoomUpdateState extends State<RoomUpdate> {
     }
   }
 
-  Future<void> deleteRoom(int index) async {
-    try {
-      // Get employee ID from SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? employeeId = prefs.getInt('employeeId');
+Future<void> deleteRoom(int index) async {
+  try {
+    // Get employee ID from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? employeeId = prefs.getInt('employeeId');
 
-      if (employeeId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Employee ID not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final roomId = rooms[index]['id'];
-      final response = await http.delete(
-        Uri.parse(
-            'http://$apiUrl:$apiPort/room/$roomId?updated_by=$employeeId'),
-        headers: {"Content-Type": "application/json"},
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          rooms.removeAt(index);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Room deleted successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        final errorResponse = json.decode(response.body);
-        throw Exception(errorResponse['error'] ?? 'Failed to delete room');
-      }
-    } catch (e) {
-      print('Error deleting room: $e');
+    if (employeeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting room: $e'),
+        const SnackBar(
+          content: Text('Error: Employee ID not found'),
           backgroundColor: Colors.red,
         ),
       );
+      return;
     }
-  }
 
-  Future<void> updateRoom(int index) async {
+    final roomId = rooms[index]['id'];
+    final response = await http.delete(
+      Uri.parse('http://$apiUrl:$apiPort/room/$roomId?updated_by=$employeeId'),
+      headers: {"Content-Type": "application/json"},
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        rooms.removeAt(index);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Room deleted successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      final errorResponse = json.decode(response.body);
+      throw Exception(errorResponse['error'] ?? 'Failed to delete room');
+    }
+  } catch (e) {
+    print('Error deleting room: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error deleting room: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+Future<void> updateRoom(int index) async {
     final room = rooms[index];
     final _formKey = GlobalKey<FormState>();
-
-    TextEditingController priceController =
-        TextEditingController(text: room['price_per_day'].toString());
-    TextEditingController roomAreaController =
-        TextEditingController(text: room['room_area'].toString());
-    TextEditingController floorNumberController =
-        TextEditingController(text: room['floor_number'].toString());
-    TextEditingController maxOccupancyController =
-        TextEditingController(text: room['max_occupancy'].toString());
-    TextEditingController bedTypeController =
-        TextEditingController(text: room['bed_type']);
+    
+    TextEditingController priceController = TextEditingController(text: room['price_per_day'].toString());
+    TextEditingController roomAreaController = TextEditingController(text: room['room_area'].toString());
+    TextEditingController floorNumberController = TextEditingController(text: room['floor_number'].toString());
+    TextEditingController maxOccupancyController = TextEditingController(text: room['max_occupancy'].toString());
+    TextEditingController bedTypeController = TextEditingController(text: room['bed_type']);
     String selectedRoomType = room['room_type'];
     String selectedRoomStatus = room['room_status'];
     List<String> selectedAmenities = List<String>.from(room['amenities']);
@@ -217,8 +196,7 @@ class RoomUpdateState extends State<RoomUpdate> {
               onPressed: () async {
                 if (_formKey.currentState?.validate() ?? false) {
                   try {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
                     int? employeeId = prefs.getInt('employeeId');
 
                     if (employeeId == null) {
@@ -257,8 +235,7 @@ class RoomUpdateState extends State<RoomUpdate> {
                         ),
                       );
                     } else {
-                      throw Exception(
-                          'Failed to update room: ${response.body}');
+                      throw Exception('Failed to update room: ${response.body}');
                     }
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -447,7 +424,6 @@ class RoomUpdateState extends State<RoomUpdate> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
@@ -515,8 +491,7 @@ class RoomUpdateState extends State<RoomUpdate> {
                             Text('Price: \$${room['price_per_day']}'),
                             Text('Max Occupancy: ${room['max_occupancy']}'),
                             Text('Status: ${room['room_status']}'),
-                            Text(
-                                'Amenities: ${(room['amenities'] as List).join(', ')}'),
+                            Text('Amenities: ${(room['amenities'] as List).join(', ')}'),
                           ],
                         ),
                         trailing: Row(
@@ -533,11 +508,11 @@ class RoomUpdateState extends State<RoomUpdate> {
                                 builder: (context) => AlertDialog(
                                   title: const Text('Delete Room'),
                                   content: const Text(
-                                      'Are you sure you want to delete this room?'),
+                                    'Are you sure you want to delete this room?'
+                                  ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
+                                      onPressed: () => Navigator.of(context).pop(),
                                       child: const Text('Cancel'),
                                     ),
                                     TextButton(
@@ -550,7 +525,7 @@ class RoomUpdateState extends State<RoomUpdate> {
                                         style: TextStyle(color: Colors.red),
                                       ),
                                     ),
-                                  ],
+                                  ], 
                                 ),
                               ),
                             ),
