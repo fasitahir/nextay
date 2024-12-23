@@ -1,24 +1,29 @@
+from dotenv import load_dotenv
+import os
 import pyodbc
+
+load_dotenv(dotenv_path='environment.env')
+
+
 class Configration:
     _instance = None
+
     def __init__(self):
         self.connect_str = (
             'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=localhost;'
-            'DATABASE=Nextay;'
-            'Trusted_Connection=yes;'
+            f'SERVER={os.getenv("AZURE_SQL_SERVER")};'
+            f'DATABASE={os.getenv("AZURE_SQL_DATABASE")};'
+            f'UID={os.getenv("AZURE_SQL_USERNAME")};'
+            f'PWD={os.getenv("AZURE_SQL_PASSWORD")};'
         )
-        self.connection = pyodbc.connect(self.connect_str)
-    @classmethod 
-    # Returns a singleton instance of the class.
+        try:
+            self.connection = pyodbc.connect(self.connect_str)
+            print("Connection successful!")
+        except pyodbc.Error as ex:
+            print(f"Error: {ex}")
+            self.connection = None
 
-    # This class method ensures that only one instance of the class is created.
-    # If an instance already exists, it returns the existing instance; otherwise,
-    # it creates a new instance and returns it.
-
-    # Returns:
-    #     cls: The singleton instance of the class.
-
+    @classmethod
     def get_instance(cls):
         if cls._instance is None:
             cls._instance = cls()
@@ -26,4 +31,16 @@ class Configration:
     
     def get_connection(self):
         return self.connection
-    
+
+
+# Create an instance to check connection
+config = Configration()
+
+# Test the connection by running a simple query
+if config.get_connection():
+    cursor = config.get_connection().cursor()
+    try:
+        cursor.execute("SELECT * FROM Employee")  # Simple query to test the connection
+        print("Connection is working!")
+    except Exception as e:
+        print(f"Error during query execution: {e}")

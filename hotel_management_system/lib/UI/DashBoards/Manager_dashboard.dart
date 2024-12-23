@@ -17,7 +17,7 @@ import 'package:hotel_management_system/UI/FeedBack/feedback_display_screen.dart
 import 'package:hotel_management_system/UI/FeedBack/feedback_display_screen.dart';
 import 'package:hotel_management_system/UI/Room_Management/Add/UpdateRoom.dart';
 import 'package:hotel_management_system/UI/Room_Management/Add/add_room.dart';
-import 'package:hotel_management_system/UI/main.dart';
+import 'package:hotel_management_system/main.dart';
 
 class ManagerHomePage extends StatelessWidget {
   final String Name;

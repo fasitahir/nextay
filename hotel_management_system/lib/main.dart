@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hotel_management_system/UI/Employee_Management/View_Attendane_Employee.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'DashBoards/Manager_dashboard.dart' as manager;
-import 'DashBoards/Employee_Dashboard.dart' as employee;
-import 'DashBoards/Accountant_dashboard.dart' as accountant;
+import 'UI/DashBoards/Manager_dashboard.dart' as manager;
+import 'UI/DashBoards/Employee_Dashboard.dart' as employee;
+import 'UI/DashBoards/Accountant_dashboard.dart' as accountant;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -114,7 +115,7 @@ class _HomePageState extends State<HomePage> {
       print("Loging In");
     }
     final response = await http.post(
-      Uri.parse('http://$apiUrl:$apiPort/login'),
+      Uri.parse('http://$apiUrl:$port/login'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'Username': username, 'Password': password}),
     );

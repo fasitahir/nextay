@@ -40,8 +40,8 @@ class _MarkAttendanceState extends State<MarkAttendance>
   }
 
   Future<void> _fetchEmployees() async {
-    final response = await http
-        .get(Uri.parse('http://$ip:$port/attendance?date=$todayDate'));
+    final response =
+        await http.get(Uri.parse('http://$ip:$port/employees?date=$todayDate'));
 
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);

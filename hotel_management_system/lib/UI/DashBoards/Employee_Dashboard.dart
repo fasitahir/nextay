@@ -6,7 +6,7 @@ import 'package:hotel_management_system/UI/Employee_Management/View_salary_Emplo
     as salary;
 import 'package:hotel_management_system/UI/FeedBack/AddFeedback.dart';
 import 'package:hotel_management_system/UI/Room_Management/Rooms_CHeckedIn/Out.dart';
-import 'package:hotel_management_system/UI/main.dart';
+import 'package:hotel_management_system/main.dart';
 
 // import 'package:hotel_management_system/DL/login.py';
 class EmployeeHomePage extends StatelessWidget {

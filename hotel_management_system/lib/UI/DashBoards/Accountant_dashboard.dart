@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hotel_management_system/UI/Finance_Management/PaySalary.dart';
 import 'package:hotel_management_system/UI/Finance_Management/ProfitGraph.dart';
 import 'package:hotel_management_system/UI/Finance_Management/ViewExpense.dart';
-import 'package:hotel_management_system/UI/main.dart';
+import 'package:hotel_management_system/main.dart';
 import 'package:hotel_management_system/UI/Finance_Management/AddExpense.dart';
 
 class AccountantHomePage extends StatelessWidget {
@@ -111,13 +111,12 @@ class AccountantHomePage extends StatelessWidget {
                               Icons.money,
                               const PaySalaryForManager(),
                             ),
-                             _buildFunctionalityBox(
+                            _buildFunctionalityBox(
                               context,
                               'Add Expense',
                               Icons.money,
                               const AddExpensePage(),
                             ),
-
                             _buildFunctionalityBox(
                               context,
                               'View Expense',

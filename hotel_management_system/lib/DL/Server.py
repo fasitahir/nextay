@@ -5,9 +5,7 @@ import DB_config as db
 import os
 from dotenv import load_dotenv
 
-
-
-
+load_dotenv("environment.env")
 from Room_dl import app as rooms_app
 from Login import app as login_app
 from employee_dl import app as employee_app
@@ -39,4 +37,10 @@ app.register_blueprint(expense_app,url_prefix='/')
 app.register_blueprint(customer_app,url_prefix='/')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=os.getenv('PORT'))
+    ip = os.getenv('IP').strip() 
+    port = os.getenv('PORT').strip()  
+
+    print(f"Server is running on: {ip}:{port}")
+    
+    # Bind Flask to your VM's public IP
+    app.run(debug=True, host=ip, port=int(port))
